@@ -54,9 +54,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50/50 via-white to-blue-50/50 p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Link href="/">
-             <Logo />
-          </Link>
+          <Logo />
         </div>
         <Card className="rounded-2xl shadow-2xl border-0 bg-white/70 backdrop-blur-xl">
           <CardHeader className="text-center pt-8">

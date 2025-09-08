@@ -38,10 +38,17 @@ export const getQuizzesFromFirestore = async (): Promise<Quiz[]> => {
         const querySnapshot = await getDocs(collection(db, "quizzes"));
         const quizzes = querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
-            // Ensure createdAt is a Date object
-            const createdAt = data.createdAt instanceof Timestamp 
-                ? data.createdAt.toDate() 
-                : new Date();
+            
+            let createdAt: Date;
+            if (data.createdAt instanceof Timestamp) {
+                createdAt = data.createdAt.toDate();
+            } else if (data.createdAt && typeof data.createdAt.seconds === 'number') {
+                createdAt = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
+            } else if (data.createdAt) {
+                createdAt = new Date(data.createdAt);
+            } else {
+                createdAt = new Date();
+            }
 
             return {
                 id: doc.id,

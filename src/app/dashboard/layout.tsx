@@ -418,6 +418,12 @@ export default function DashboardLayout({
                 )}
                 
                 <div className="space-y-3 border-t border-white/20 pt-6">
+                  {!isPremium && (
+                    <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
+                      <Crown className="w-5 h-5 mr-3" />Passer Premium
+                      <Sparkles className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
                   <Link href="/dashboard/profile">
                     <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
                       <UserIcon className="w-5 h-5 mr-4" />Mon Profil
@@ -428,12 +434,6 @@ export default function DashboardLayout({
                        <Settings className="w-5 h-5 mr-4" />Paramètres
                      </Button>
                    </Link>
-                  {!isPremium && (
-                    <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
-                      <Crown className="w-5 h-5 mr-3" />Passer Premium
-                      <Sparkles className="w-4 h-4 ml-2" />
-                    </Button>
-                  )}
                   <Button variant="ghost" className="w-full justify-start text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-4" onClick={handleLogout}>
                     <LogOut className="w-5 h-5 mr-4" />Se déconnecter
                   </Button>

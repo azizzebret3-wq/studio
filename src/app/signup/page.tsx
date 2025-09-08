@@ -61,7 +61,7 @@ export default function SignupPage() {
       const querySnapshot = await getDocs(q);
       
       let userRole = 'user';
-      if (querySnapshot.empty) {
+      if (querySnapshot.docs.length === 0) {
         // No users exist, this is the first one, make them admin.
         userRole = 'admin';
         toast({

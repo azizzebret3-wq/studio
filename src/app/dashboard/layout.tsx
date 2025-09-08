@@ -105,14 +105,14 @@ export default function DashboardLayout({
   }
 
   
-  const getInitials = (name: string | undefined) => {
+  const getInitials = (name: string | undefined | null) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
   }
 
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
-  const navItems = isAdmin ? [...userNavItems.slice(0, 2), ...adminNavItems] : userNavItems;
+  const navItems = isAdmin ? [...userNavItems.slice(0, 2), { title: "Admin", url: "/dashboard/admin", icon: Settings, gradient: "from-gray-500 to-gray-700" }, ...adminNavItems] : userNavItems;
   const mobileUserNav = userNavItems;
 
   return (
@@ -236,7 +236,7 @@ export default function DashboardLayout({
 
                 <div className="hidden md:flex items-center gap-3">
                   <Avatar className="w-9 h-9 ring-2 ring-white/50 shadow-lg hover-lift">
-                    <AvatarImage src={userData?.photoURL} />
+                    <AvatarImage src={userData?.photoURL ?? undefined} />
                     <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
                        {getInitials(userData?.fullName)}
                     </AvatarFallback>
@@ -294,7 +294,7 @@ export default function DashboardLayout({
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       <Avatar className="w-12 h-12 ring-2 ring-white/30 shadow-lg">
-                        <AvatarImage src={userData?.photoURL} />
+                        <AvatarImage src={userData?.photoURL ?? undefined} />
                         <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
                           {getInitials(userData?.fullName)}
                         </AvatarFallback>

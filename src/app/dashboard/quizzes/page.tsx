@@ -32,9 +32,20 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { getQuizzesFromFirestore, Quiz } from '@/lib/firestore.service';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function QuizzesPage() {
-  const { userData, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -53,6 +64,8 @@ export default function QuizzesPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   
   const canGenerate = userData?.role === 'admin' || userData?.subscription_type === 'premium';
+  const isPremium = userData?.subscription_type === 'premium';
+  const isAdmin = userData?.role === 'admin';
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -86,8 +99,6 @@ export default function QuizzesPage() {
     );
   });
   
-  const isPremium = userData?.subscription_type === 'premium';
-  
   const categories = ['all', ...Array.from(new Set(quizzes.map(q => q.category)))];
   const difficulties = ['all', 'facile', 'moyen', 'difficile'];
   const accessTypes = ['all', 'gratuit', 'premium'];
@@ -108,7 +119,6 @@ export default function QuizzesPage() {
 
     try {
       const result = await generateQuiz({ topic, competitionType, numberOfQuestions });
-      // Store in session storage to pass to the next page
       sessionStorage.setItem('generatedQuiz', JSON.stringify(result));
       toast({
         title: 'Quiz généré !',
@@ -149,7 +159,6 @@ export default function QuizzesPage() {
         </div>
       </div>
 
-       {/* AI Quiz Generator Section */}
        <Card className="glassmorphism shadow-xl">
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -262,7 +271,7 @@ export default function QuizzesPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredQuizzes.map((quiz) => {
-              const isLocked = quiz.access_type === 'premium' && !isPremium;
+              const isLocked = quiz.access_type === 'premium' && !isPremium && !isAdmin;
               return (
                 <Card key={quiz.id} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0 flex flex-col">
                   <CardContent className="p-5 flex-grow">
@@ -292,29 +301,47 @@ export default function QuizzesPage() {
                       <span>{quiz.duration_minutes} min</span>
                     </div>
                   </CardContent>
-                   <Button 
-                      asChild
-                      className={`w-full font-bold text-white rounded-t-none h-12 text-sm ${
-                        isLocked 
-                          ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
-                      }`}
-                      disabled={isLocked}
-                    >
-                      <Link href={isLocked ? '#' : `/dashboard/take-quiz?id=${quiz.id}`}>
-                        {isLocked ? (
-                          <>
-                            <Lock className="w-4 h-4 mr-2" />
-                            Premium
-                          </>
-                        ) : (
-                          <>
-                            <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
-                            Commencer
-                          </>
-                        )}
-                      </Link>
-                    </Button>
+                   <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <Button 
+                            className={`w-full font-bold text-white rounded-t-none h-12 text-sm ${
+                              isLocked 
+                                ? 'bg-gradient-to-r from-gray-400 to-gray-500'
+                                : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
+                            }`}
+                            onClick={(e) => {
+                              if (isLocked) e.preventDefault();
+                              else router.push(`/dashboard/take-quiz?id=${quiz.id}`);
+                            }}
+                          >
+                             {isLocked ? (
+                                <>
+                                  <Lock className="w-4 h-4 mr-2" />
+                                  Premium
+                                </>
+                              ) : (
+                                <>
+                                  <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+                                  Commencer
+                                </>
+                              )}
+                          </Button>
+                      </AlertDialogTrigger>
+                      {isLocked && (
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Contenu Premium</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Ce quiz est réservé aux membres Premium. Passez Premium pour accéder à tous les quiz, cours et vidéos en illimité !
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction>Passer Premium</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      )}
+                    </AlertDialog>
                 </Card>
               );
             })}

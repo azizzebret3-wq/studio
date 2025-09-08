@@ -107,7 +107,7 @@ export default function Home() {
       <footer className="bg-card">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <Logo />
-          <p className="text-sm text-foreground/60">&copy; {new Date().getFullYear()} Concours Facile. Tous droits réservés.</p>
+          <p className="text-sm text-foreground/60">&copy; {new Date().getFullYear()} Gagne ton concours. Tous droits réservés.</p>
         </div>
       </footer>
     </div>

@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 
-const APP_NAME = "Concours Facile";
-const APP_DESCRIPTION = "Plateforme de préparation aux concours au Burkina Faso.";
+const APP_NAME = "Gagne ton concours";
+const APP_DESCRIPTION = "La plateforme la plus moderne et interactive pour réussir tes concours directs et professionnels.";
 
 export const metadata: Metadata = {
   title: {

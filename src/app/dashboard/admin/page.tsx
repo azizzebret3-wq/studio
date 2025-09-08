@@ -1,4 +1,3 @@
-
 // src/app/dashboard/admin/page.tsx
 'use client';
 

@@ -4,9 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAuth, signOut } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
 import {
   BookOpen,
   ClipboardList as Play,
@@ -34,15 +33,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo';
 
-interface UserData {
-  fullName?: string;
-  email?: string;
-  competitionType?: string;
-  photoURL?: string;
-  role?: 'admin' | 'user';
-  subscription_type?: 'premium' | 'gratuit';
-}
-
 const userNavItems = [
   { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
@@ -65,39 +55,22 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-  const { setTheme, theme } = useTheme();
-  const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { setTheme } = useTheme();
+  const { user, userData, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUserData(userDoc.data() as UserData);
-        } else {
-          // Fallback if user document doesn't exist
-          setUserData({ email: user.email || '' });
-        }
-      } else {
-        router.push('/login');
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
   
   // Close mobile menu on route change
   useEffect(() => {
     if (mobileMenuOpen) {
       setMobileMenuOpen(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
 
@@ -119,7 +92,7 @@ export default function DashboardLayout({
     }
   };
 
-  if (loading) {
+  if (loading || !user || !userData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
         <div className="relative">
@@ -131,9 +104,6 @@ export default function DashboardLayout({
     );
   }
 
-  if (!user) {
-    return null;
-  }
   
   const getInitials = (name: string | undefined) => {
     if (!name) return 'U';
@@ -255,7 +225,7 @@ export default function DashboardLayout({
                     <Button
                       variant="ghost"
                       className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
-                        pathname === item.url
+                        pathname.startsWith(item.url)
                           ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
                           : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
                       }`}
@@ -269,7 +239,7 @@ export default function DashboardLayout({
 
               {/* Profile & Hamburger */}
               <div className="flex items-center gap-3">
-                {isPremium && (
+                {isPremium && !isAdmin && (
                   <Badge className="hidden sm:flex bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 font-bold shadow-lg px-3 py-1 text-xs">
                     <Crown className="w-3 h-3 mr-1.5" />
                     Premium
@@ -292,7 +262,7 @@ export default function DashboardLayout({
                        {userData?.fullName?.split(' ')[0] || 'Utilisateur'}
                     </p>
                     <p className="text-xs text-muted-foreground font-medium">
-                      {isPremium ? '👑 Premium' : '🆓 Gratuit'}
+                      {isAdmin ? '👑 Admin' : (isPremium ? '🌟 Premium' : '🆓 Gratuit')}
                     </p>
                   </div>
                 </div>
@@ -348,15 +318,9 @@ export default function DashboardLayout({
                       <div className="flex-1">
                         <p className="font-bold text-white text-sm">{userData?.fullName || 'Utilisateur'}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          {isPremium ? (
-                            <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs font-bold">
-                              <Crown className="w-3 h-3 mr-1" />Premium
+                           <Badge className={`text-xs font-bold border-0 ${isAdmin ? 'bg-indigo-500 text-white' : (isPremium ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : 'bg-white/20 text-white border-white/30')}`}>
+                                {isAdmin ? <><Crown className="w-3 h-3 mr-1" />Admin</> : (isPremium ? <><Crown className="w-3 h-3 mr-1" />Premium</> : 'Gratuit')}
                             </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs font-medium bg-white/20 text-white border-white/30">
-                              Gratuit
-                            </Badge>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -398,13 +362,13 @@ export default function DashboardLayout({
                          <Button
                             variant="ghost"
                             className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
-                              pathname === item.url
+                              pathname.startsWith(item.url)
                                 ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
                                 : 'text-gray-300 hover:bg-white/10 hover:text-white'
                             }`}
                           >
                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
-                              pathname === item.url ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
+                              pathname.startsWith(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
                            }`}>
                               <item.icon className="w-5 h-5" />
                             </div>
@@ -416,7 +380,7 @@ export default function DashboardLayout({
                 )}
                 
                 <div className="space-y-3 border-t border-white/20 pt-6">
-                  {!isPremium && (
+                  {!isPremium && !isAdmin && (
                     <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
                       <Crown className="w-5 h-5 mr-3" />Passer Premium
                       <Sparkles className="w-4 h-4 ml-2" />

@@ -76,7 +76,7 @@ export default function Dashboard() {
       });
   }, [quizzes, recentAttempts]);
 
-  if (loading) {
+  if (loading || !userData) {
     return (
       <div className="p-4 sm:p-6 space-y-6">
         <div className="animate-pulse space-y-6">
@@ -96,6 +96,7 @@ export default function Dashboard() {
   }
 
   const isPremium = userData?.subscription_type === 'premium';
+  const isAdmin = userData?.role === 'admin';
   const firstName = userData?.fullName?.split(' ')[0] || 'Champion';
 
   return (
@@ -128,11 +129,11 @@ export default function Dashboard() {
             <div className="text-3xl floating">🚀</div>
           </div>
           <p className="text-base sm:text-lg text-muted-foreground font-medium">
-            Prêt à dominer ton concours ?
+            {isAdmin ? "Prêt à gérer la plateforme ?" : "Prêt à dominer ton concours ?"}
           </p>
         </div>
         
-        {!isPremium && (
+        {!isPremium && !isAdmin && (
           <Card className="card-hover glassmorphism border-2 border-yellow-400/50 shadow-xl w-full lg:w-auto">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
@@ -258,9 +259,9 @@ export default function Dashboard() {
                                 ? 'bg-gray-400 cursor-not-allowed'
                                 : 'bg-gradient-to-r from-indigo-500 to-purple-600'
                             }`}
-                            disabled={quiz.access_type === 'premium' && !isPremium}
+                            disabled={quiz.access_type === 'premium' && !isPremium && !isAdmin}
                           >
-                             {quiz.access_type === 'premium' && !isPremium ? <Crown className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+                             {quiz.access_type === 'premium' && !isPremium && !isAdmin ? <Crown className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
                           </Button>
                         </Link>
                       </div>

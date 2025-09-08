@@ -1,6 +1,6 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
 export interface Quiz {
@@ -38,11 +38,15 @@ export const getQuizzesFromFirestore = async (): Promise<Quiz[]> => {
         const querySnapshot = await getDocs(collection(db, "quizzes"));
         const quizzes = querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
+            // Ensure createdAt is a Date object
+            const createdAt = data.createdAt instanceof Timestamp 
+                ? data.createdAt.toDate() 
+                : new Date();
+
             return {
                 id: doc.id,
                 ...data,
-                // Firestore Timestamps need to be converted to JS Date objects
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+                createdAt,
             } as Quiz;
         });
         return quizzes;

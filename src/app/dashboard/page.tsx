@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [recentAttempts] = useState(mockRecentAttempts);
   const [contents] = useState(mockContents);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
   
   const [stats, setStats] = useState({
     totalQuizzes: 0,
@@ -55,11 +56,14 @@ export default function Dashboard() {
   
   useEffect(() => {
     const fetchQuizzes = async () => {
+      setLoadingQuizzes(true);
       try {
         const fetchedQuizzes = await getQuizzesFromFirestore();
         setQuizzes(fetchedQuizzes);
       } catch (error) {
         console.error("Failed to fetch quizzes for dashboard", error);
+      } finally {
+        setLoadingQuizzes(false);
       }
     };
     fetchQuizzes();
@@ -219,7 +223,12 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              {quizzes.length === 0 ? (
+              {loadingQuizzes ? (
+                 <div className="text-center py-10">
+                  <Loader className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-spin" />
+                  <h3 className="text-lg font-semibold text-muted-foreground">Chargement des quiz...</h3>
+                </div>
+              ) : quizzes.length === 0 ? (
                 <div className="text-center py-10">
                   <Play className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-muted-foreground">Aucun quiz disponible</h3>

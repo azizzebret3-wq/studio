@@ -1,6 +1,6 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
 export interface Quiz {
@@ -31,6 +31,20 @@ export interface AppUser {
   createdAt: Date;
   role?: 'admin' | 'user';
   subscription_type?: 'premium' | 'gratuit';
+  photoURL?: string;
+}
+
+// Define the structure of an Attempt document
+export interface Attempt {
+    id?: string;
+    userId: string;
+    quizId: string;
+    quizTitle: string;
+    score: number;
+    totalQuestions: number;
+    percentage: number;
+    correctAnswers: number;
+    createdAt: Date;
 }
 
 
@@ -52,16 +66,14 @@ export const getQuizzesFromFirestore = async (): Promise<Quiz[]> => {
             const data = doc.data();
             
             let createdAt: Date;
-            // This handles both Firestore Timestamps and JS Date objects
             if (data.createdAt instanceof Timestamp) {
                 createdAt = data.createdAt.toDate();
             } else if (data.createdAt && typeof data.createdAt.seconds === 'number') {
                 createdAt = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
             } else if (data.createdAt) {
-                // Assuming it might be a string or a plain JS Date from generation
                 createdAt = new Date(data.createdAt);
             } else {
-                createdAt = new Date(); // Fallback
+                createdAt = new Date();
             }
 
             return {
@@ -107,5 +119,34 @@ export const updateUserRoleInFirestore = async (uid: string, role: 'admin' | 'us
     } catch (e) {
         console.error("Error updating user role: ", e);
         throw new Error("Could not update user role");
+    }
+};
+
+export const saveAttemptToFirestore = async (attemptData: Omit<Attempt, 'id'>) => {
+    try {
+        const docRef = await addDoc(collection(db, "attempts"), attemptData);
+        return docRef.id;
+    } catch (e) {
+        console.error("Error saving attempt: ", e);
+        throw new Error("Could not save attempt");
+    }
+};
+
+export const getAttemptsFromFirestore = async (userId: string): Promise<Attempt[]> => {
+    try {
+        const attemptsRef = collection(db, "attempts");
+        const q = query(attemptsRef, where("userId", "==", userId), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt.toDate(),
+            } as Attempt;
+        });
+    } catch (e) {
+        console.error("Error getting attempts: ", e);
+        throw new Error("Could not fetch attempts");
     }
 };

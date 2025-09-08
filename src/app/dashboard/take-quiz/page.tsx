@@ -10,10 +10,11 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader } from 'lucide-react';
-import { getQuizzesFromFirestore, Quiz } from '@/lib/firestore.service';
+import { getQuizzesFromFirestore, Quiz, saveAttemptToFirestore } from '@/lib/firestore.service';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
-type ActiveQuiz = GenerateQuizOutput['quiz'];
+type ActiveQuiz = GenerateQuizOutput['quiz'] & { id?: string };
 
 type QuestionResult = {
   question: string;
@@ -28,6 +29,7 @@ export default function TakeQuizPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [quiz, setQuiz] = useState<ActiveQuiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -38,18 +40,18 @@ export default function TakeQuizPage() {
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const quizId = searchParams.get('id');
+  const source = searchParams.get('source');
+
   const loadQuiz = useCallback(async () => {
     setLoading(true);
-    const source = searchParams.get('source');
-    const quizId = searchParams.get('id');
-
+    
     if (source === 'generated') {
       const quizData = sessionStorage.getItem('generatedQuiz');
       if (quizData) {
         const parsedData: GenerateQuizOutput = JSON.parse(quizData);
-        setQuiz(parsedData.quiz);
+        setQuiz({...parsedData.quiz, id: `generated-${Date.now()}`});
         setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
-        // Do not remove from session storage immediately, in case of refresh
       } else {
         toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
         router.push('/dashboard/quizzes');
@@ -73,46 +75,23 @@ export default function TakeQuizPage() {
       router.push('/dashboard/quizzes');
     }
     setLoading(false);
-  }, [searchParams, router, toast]);
+  }, [quizId, source, router, toast]);
 
   useEffect(() => {
     loadQuiz();
   }, [loadQuiz]);
+  
+  const handleFinishQuiz = useCallback(async (finalAnswers?: string[][]) => {
+    if (!quiz || !user) return;
 
-  useEffect(() => {
-    if (quiz && !quizFinished && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
-      return () => clearInterval(timer);
-    } else if (timeLeft === 0 && !quizFinished) {
-      handleFinishQuiz();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quiz, quizFinished, timeLeft]);
-
-
-  const handleNextQuestion = () => {
-    const newAnswers = [...userAnswers, selectedAnswers];
-    setUserAnswers(newAnswers);
-    setSelectedAnswers([]);
-    if (currentQuestionIndex < quiz!.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      handleFinishQuiz(newAnswers);
-    }
-  };
-
-  const handleFinishQuiz = (finalAnswers?: string[][]) => {
-    // Clear session storage if it was a generated quiz
-    if (searchParams.get('source') === 'generated') {
+    if (source === 'generated') {
       sessionStorage.removeItem('generatedQuiz');
     }
     
     const answersToProcess = finalAnswers || [...userAnswers, selectedAnswers];
     setQuizFinished(true);
 
-    const newResults: QuestionResult[] = quiz!.questions.map((q, index) => {
+    const newResults: QuestionResult[] = quiz.questions.map((q, index) => {
       const userSelection = answersToProcess[index] || [];
       const isCorrect =
         q.correctAnswers.length === userSelection.length &&
@@ -128,6 +107,51 @@ export default function TakeQuizPage() {
       };
     });
     setResults(newResults);
+
+    // Save attempt to Firestore
+    const score = newResults.filter(r => r.isCorrect).length;
+    const totalQuestions = quiz.questions.length;
+    
+    try {
+        await saveAttemptToFirestore({
+            userId: user.uid,
+            quizId: quiz.id || 'generated',
+            quizTitle: quiz.title,
+            score: score,
+            totalQuestions: totalQuestions,
+            percentage: Math.round((score / totalQuestions) * 100),
+            correctAnswers: score,
+            createdAt: new Date(),
+        });
+        toast({ title: 'Résultats enregistrés !', description: 'Votre performance a été sauvegardée.' });
+    } catch(error) {
+        console.error("Failed to save attempt", error);
+        toast({ title: 'Erreur', description: "Impossible d'enregistrer vos résultats.", variant: 'destructive' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz, user, source, userAnswers, selectedAnswers]);
+
+  useEffect(() => {
+    if (quiz && !quizFinished && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    } else if (timeLeft === 0 && !quizFinished) {
+      handleFinishQuiz();
+    }
+  }, [quiz, quizFinished, timeLeft, handleFinishQuiz]);
+
+
+  const handleNextQuestion = () => {
+    const newAnswers = [...userAnswers, selectedAnswers];
+    setUserAnswers(newAnswers);
+    setSelectedAnswers([]);
+    if (currentQuestionIndex < quiz!.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      handleFinishQuiz(newAnswers);
+    }
   };
   
   const handleAnswerChange = (option: string) => {

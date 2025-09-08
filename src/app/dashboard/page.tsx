@@ -27,11 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { getQuizzesFromFirestore, Quiz } from "@/lib/firestore.service";
-
-// Mock data, to be replaced with Firebase data later
-const mockRecentAttempts:any[] = [
-];
+import { getQuizzesFromFirestore, Quiz, getAttemptsFromFirestore, Attempt } from "@/lib/firestore.service";
 
 const mockContents = [
     { id: 'c1', title: 'Résumé de la Constitution', type: 'pdf', access_type: 'gratuit' },
@@ -44,9 +40,9 @@ export default function Dashboard() {
   const { user, userData, loading } = useAuth();
   
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [recentAttempts] = useState(mockRecentAttempts);
+  const [recentAttempts, setRecentAttempts] = useState<Attempt[]>([]);
   const [contents] = useState(mockContents);
-  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   
   const [stats, setStats] = useState({
     totalQuizzes: 0,
@@ -56,36 +52,43 @@ export default function Dashboard() {
   });
   
   useEffect(() => {
-    const fetchQuizzes = async () => {
-      setLoadingQuizzes(true);
+    const fetchData = async () => {
+      if (!user) return;
+      setLoadingData(true);
       try {
-        const fetchedQuizzes = await getQuizzesFromFirestore();
+        const [fetchedQuizzes, fetchedAttempts] = await Promise.all([
+          getQuizzesFromFirestore(),
+          getAttemptsFromFirestore(user.uid)
+        ]);
         setQuizzes(fetchedQuizzes);
+        setRecentAttempts(fetchedAttempts);
       } catch (error) {
-        console.error("Failed to fetch quizzes for dashboard", error);
+        console.error("Failed to fetch dashboard data", error);
       } finally {
-        setLoadingQuizzes(false);
+        setLoadingData(false);
       }
     };
-    fetchQuizzes();
-  }, []);
+    if (!loading && user) {
+      fetchData();
+    }
+  }, [user, loading]);
 
   useEffect(() => {
       const totalQuizzes = quizzes.length;
       const completedQuizzes = recentAttempts.length;
-      const averageScore = recentAttempts.length > 0 
-        ? recentAttempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / recentAttempts.length 
+      const averageScore = completedQuizzes > 0 
+        ? recentAttempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / completedQuizzes
         : 0;
 
       setStats({
         totalQuizzes,
         completedQuizzes,
         averageScore: Math.round(averageScore),
-        streak: completedQuizzes,
+        streak: completedQuizzes, 
       });
   }, [quizzes, recentAttempts]);
 
-  if (loading || !userData) {
+  if (loading || loadingData) {
     return (
       <div className="p-4 sm:p-6 space-y-6">
         <div className="animate-pulse space-y-6">
@@ -135,7 +138,7 @@ export default function Dashboard() {
             <h1 className="text-3xl sm:text-4xl font-black gradient-text">
               Salut {firstName} ! 
             </h1>
-            <div className="text-3xl floating">🚀</div>
+            <div className="text-3xl">🚀</div>
           </div>
           <p className="text-base sm:text-lg text-muted-foreground font-medium">
             {isAdmin ? "Prêt à gérer la plateforme ?" : "Prêt à dominer ton concours ?"}
@@ -224,7 +227,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              {loadingQuizzes ? (
+              {loadingData ? (
                  <div className="text-center py-10">
                   <Loader className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-spin" />
                   <h3 className="text-lg font-semibold text-muted-foreground">Chargement des quiz...</h3>
@@ -265,7 +268,7 @@ export default function Dashboard() {
                               </div>
                             </div>
                         </div>
-                        <Link href={`/dashboard/quizzes/${quiz.id}`} passHref>
+                        <Link href={`/dashboard/take-quiz?id=${quiz.id}`} passHref>
                           <Button 
                             size="icon"
                             className={`rounded-full shadow-md w-10 h-10 ${
@@ -321,9 +324,9 @@ export default function Dashboard() {
                       'bg-red-500/10 border-red-500/20'
                     }`}>
                       <div>
-                        <p className="font-semibold text-sm text-foreground">Quiz #{attempt.quiz_id.slice(-6)}</p>
+                        <p className="font-semibold text-sm text-foreground">{attempt.quizTitle}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(attempt.created_date), 'dd MMM', { locale: fr })} - {attempt.correct_answers}/{attempt.total_questions}
+                          {format(new Date(attempt.createdAt), 'dd MMM', { locale: fr })} - {attempt.correctAnswers}/{attempt.totalQuestions}
                         </p>
                       </div>
                       <div className={`text-lg font-black ${
@@ -385,5 +388,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    

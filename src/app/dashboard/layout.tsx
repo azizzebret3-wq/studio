@@ -109,9 +109,29 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
+      <SidebarInset>
+        <header className="flex items-center justify-between p-4 bg-card md:hidden sticky top-0 z-10 border-b">
           <Logo />
+           <Avatar className="h-8 w-8">
+             <AvatarImage src={userData?.photoURL} />
+             <AvatarFallback>{getInitials(userData?.fullName)}</AvatarFallback>
+           </Avatar>
+           <SidebarTrigger>
+            <Menu />
+          </SidebarTrigger>
+        </header>
+        <main className="flex-1 p-4 md:p-8">
+          {children}
+        </main>
+      </SidebarInset>
+       <Sidebar side="right">
+        <SidebarHeader>
+          <div className="flex items-center justify-between">
+            <Logo />
+            <SidebarTrigger className="md:hidden">
+              <Menu />
+            </SidebarTrigger>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -165,11 +185,11 @@ export default function DashboardLayout({
               <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                   <UserCircle className="mr-2 h-4 w-4" />
                   <span>Profil</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Paramètres</span>
                 </DropdownMenuItem>
@@ -183,23 +203,6 @@ export default function DashboardLayout({
           </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="flex items-center justify-between p-4 bg-card md:hidden sticky top-0 z-10 border-b">
-          <SidebarTrigger>
-            <Menu />
-          </SidebarTrigger>
-          <Logo />
-           <Avatar className="h-8 w-8">
-             <AvatarImage src={userData?.photoURL} />
-             <AvatarFallback>{getInitials(userData?.fullName)}</AvatarFallback>
-           </Avatar>
-        </header>
-        <main className="flex-1 p-4 md:p-8">
-          {children}
-        </main>
-      </SidebarInset>
     </SidebarProvider>
   );
 }
-
-    

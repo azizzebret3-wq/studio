@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Logo } from "@/components/logo"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, ArrowRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SignupPage() {
@@ -88,43 +89,37 @@ export default function SignupPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50/50 via-white to-blue-50/50 p-4 py-12">
+      <div className="w-full max-w-lg">
         <div className="mb-8 flex justify-center">
-          <Logo />
+           <Link href="/">
+             <Logo />
+          </Link>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline">Créer un compte</CardTitle>
-            <CardDescription>
-              Entrez vos informations pour commencer votre préparation.
+        <Card className="rounded-2xl shadow-2xl border-0 bg-white/70 backdrop-blur-xl">
+          <CardHeader className="text-center pt-8">
+            <CardTitle className="text-3xl font-black bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+              Créez votre compte
+            </CardTitle>
+            <CardDescription className="text-gray-600 font-medium pt-2">
+              Rejoignez des milliers de candidats et commencez à gagner.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form className="grid gap-4" onSubmit={handleSignup}>
+          <CardContent className="p-8">
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6" onSubmit={handleSignup}>
               <div className="grid gap-2">
-                <Label htmlFor="full-name">Nom & Prénom(s)</Label>
+                <Label htmlFor="full-name" className="font-semibold text-gray-700">Nom & Prénom(s)</Label>
                 <Input 
                   id="full-name" 
                   placeholder="John Doe" 
                   required 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  className="rounded-xl h-12"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="nom@exemple.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Numéro de téléphone</Label>
+                <Label htmlFor="phone" className="font-semibold text-gray-700">Numéro de téléphone</Label>
                 <Input 
                   id="phone" 
                   type="tel" 
@@ -132,13 +127,26 @@ export default function SignupPage() {
                   required 
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  className="rounded-xl h-12"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="competition-type">Type de concours</Label>
+              <div className="grid gap-2 md:col-span-2">
+                <Label htmlFor="email" className="font-semibold text-gray-700">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nom@exemple.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-xl h-12"
+                />
+              </div>
+               <div className="grid gap-2 md:col-span-2">
+                <Label htmlFor="competition-type" className="font-semibold text-gray-700">Type de concours</Label>
                 <Select required onValueChange={setCompetitionType} value={competitionType}>
-                  <SelectTrigger id="competition-type">
-                    <SelectValue placeholder="Sélectionnez un type" />
+                  <SelectTrigger id="competition-type" className="rounded-xl h-12">
+                    <SelectValue placeholder="Sélectionnez un type de concours" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="direct">Concours Direct</SelectItem>
@@ -146,8 +154,8 @@ export default function SignupPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Mot de passe</Label>
+              <div className="grid gap-2 md:col-span-2">
+                <Label htmlFor="password" className="font-semibold text-gray-700">Mot de passe</Label>
                 <div className="relative">
                   <Input 
                     id="password" 
@@ -155,25 +163,27 @@ export default function SignupPage() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="rounded-xl h-12"
                   />
                    <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-500 hover:text-gray-800"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </Button>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Création en cours..." : "Créer le compte"}
+              <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg group md:col-span-2" disabled={loading}>
+                 {loading ? "Création en cours..." : "Créer mon compte"}
+                 {!loading && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}
               </Button>
             </form>
-            <div className="mt-4 text-center text-sm">
+            <div className="mt-6 text-center text-sm font-medium text-gray-600">
               Vous avez déjà un compte?{" "}
-              <Link href="/login" className="underline">
+              <Link href="/login" className="text-purple-600 hover:text-purple-800 font-bold hover:underline">
                 Se connecter
               </Link>
             </div>

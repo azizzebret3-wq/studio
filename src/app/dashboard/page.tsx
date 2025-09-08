@@ -35,10 +35,7 @@ const mockQuizzes = [
   { id: '4', title: 'Droit Administratif', access_type: 'premium', difficulty: 'difficile', duration_minutes: 30, total_questions: 30, category: 'Droit' },
 ];
 
-const mockRecentAttempts = [
-    { id: 'a1', quiz_id: 'q1', percentage: 85, correct_answers: 17, total_questions: 20, created_date: new Date().toISOString() },
-    { id: 'a2', quiz_id: 'q2', percentage: 70, correct_answers: 14, total_questions: 20, created_date: new Date(Date.now() - 86400000).toISOString() },
-    { id: 'a3', quiz_id: 'q3', percentage: 55, correct_answers: 11, total_questions: 20, created_date: new Date(Date.now() - 172800000).toISOString() },
+const mockRecentAttempts:any[] = [
 ];
 
 const mockContents = [
@@ -60,11 +57,11 @@ export default function Dashboard() {
     totalQuizzes: 0,
     completedQuizzes: 0,
     averageScore: 0,
-    weeklyProgress: 0
+    streak: 0,
   });
 
   useEffect(() => {
-      // Calculate stats from mocked data
+      // This will be replaced with real user data fetching from Firestore
       const totalQuizzes = quizzes.length;
       const completedQuizzes = recentAttempts.length;
       const averageScore = recentAttempts.length > 0 
@@ -72,10 +69,10 @@ export default function Dashboard() {
         : 0;
 
       setStats({
-        totalQuizzes,
-        completedQuizzes,
-        averageScore: Math.round(averageScore),
-        weeklyProgress: Math.min(100, (completedQuizzes / Math.max(1, totalQuizzes)) * 100)
+        totalQuizzes, // This can be the total available quizzes
+        completedQuizzes, // This should come from user's attempts
+        averageScore: Math.round(averageScore), // from user's attempts
+        streak: completedQuizzes, // This is a placeholder for a real streak calculation
       });
   }, [quizzes, recentAttempts]);
 
@@ -83,26 +80,26 @@ export default function Dashboard() {
     return (
       <div className="p-4 sm:p-6 space-y-6">
         <div className="animate-pulse space-y-6">
-          <div className="h-10 bg-gradient-to-r from-purple-200 to-pink-200 rounded-2xl w-2/3"></div>
+          <div className="h-10 bg-muted rounded-2xl w-2/3"></div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[1,2,3,4].map(i => (
-              <div key={i} className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl"></div>
+              <div key={i} className="h-32 bg-muted rounded-3xl"></div>
             ))}
           </div>
           <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl"></div>
-            <div className="h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl"></div>
+            <div className="lg:col-span-2 h-80 bg-muted rounded-3xl"></div>
+            <div className="h-80 bg-muted rounded-3xl"></div>
           </div>
         </div>
       </div>
     );
   }
 
-  const isPremium = userData?.premium || false; // Assuming a 'premium' field in userData
+  const isPremium = userData?.subscription_type === 'premium';
   const firstName = userData?.fullName?.split(' ')[0] || 'Champion';
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 space-y-6 bg-gradient-to-br from-purple-50/50 via-white to-blue-50/50 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6">
        <style>{`
           .card-hover {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -111,9 +108,9 @@ export default function Dashboard() {
             transform: translateY(-6px) scale(1.01);
           }
           .glassmorphism {
-            background: rgba(255, 255, 255, 0.7);
+            background: hsl(var(--card) / 0.7);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid hsl(var(--border) / 0.2);
           }
           .gradient-text {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
@@ -130,21 +127,21 @@ export default function Dashboard() {
             </h1>
             <div className="text-3xl floating">🚀</div>
           </div>
-          <p className="text-base sm:text-lg text-gray-600 font-medium">
+          <p className="text-base sm:text-lg text-muted-foreground font-medium">
             Prêt à dominer ton concours ?
           </p>
         </div>
         
         {!isPremium && (
-          <Card className="card-hover glassmorphism border-2 border-yellow-200 shadow-xl w-full lg:w-auto">
+          <Card className="card-hover glassmorphism border-2 border-yellow-400/50 shadow-xl w-full lg:w-auto">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Crown className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-yellow-800">Passer Premium</h3>
-                  <p className="text-sm text-yellow-700">Débloquer tout</p>
+                  <h3 className="font-bold text-yellow-800 dark:text-yellow-300">Passer Premium</h3>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400">Débloquer tout</p>
                 </div>
                 <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg ml-auto">
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -158,46 +155,46 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="card-hover glassmorphism shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 group-hover:from-blue-500/20 transition-all"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 group-hover:from-blue-500/20 transition-all dark:from-blue-500/20 dark:to-cyan-500/20 dark:group-hover:from-blue-500/30"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-4">
-            <CardTitle className="text-sm font-semibold text-gray-600 uppercase">Quiz</CardTitle>
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Quiz</CardTitle>
             <Play className="w-5 h-5 text-blue-500" />
           </CardHeader>
           <CardContent className="relative z-10 p-4 pt-0">
-            <div className="text-2xl font-black text-gray-900">{stats.totalQuizzes}</div>
+            <div className="text-2xl font-black text-foreground">{stats.totalQuizzes}</div>
           </CardContent>
         </Card>
 
         <Card className="card-hover glassmorphism shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 group-hover:from-green-500/20 transition-all"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 group-hover:from-green-500/20 transition-all dark:from-green-500/20 dark:to-emerald-500/20 dark:group-hover:from-green-500/30"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-4">
-            <CardTitle className="text-sm font-semibold text-gray-600 uppercase">Complétés</CardTitle>
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Complétés</CardTitle>
              <Target className="w-5 h-5 text-green-500" />
           </CardHeader>
           <CardContent className="relative z-10 p-4 pt-0">
-            <div className="text-2xl font-black text-gray-900">{stats.completedQuizzes}</div>
+            <div className="text-2xl font-black text-foreground">{stats.completedQuizzes}</div>
           </CardContent>
         </Card>
 
         <Card className="card-hover glassmorphism shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 group-hover:from-purple-500/20 transition-all"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 group-hover:from-purple-500/20 transition-all dark:from-purple-500/20 dark:to-pink-500/20 dark:group-hover:from-purple-500/30"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-4">
-            <CardTitle className="text-sm font-semibold text-gray-600 uppercase">Score</CardTitle>
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Score</CardTitle>
             <Trophy className="w-5 h-5 text-purple-500" />
           </CardHeader>
           <CardContent className="relative z-10 p-4 pt-0">
-            <div className="text-2xl font-black text-gray-900">{stats.averageScore}%</div>
+            <div className="text-2xl font-black text-foreground">{stats.averageScore}%</div>
           </CardContent>
         </Card>
 
         <Card className="card-hover glassmorphism shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 group-hover:from-orange-500/20 transition-all"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 group-hover:from-orange-500/20 transition-all dark:from-orange-500/20 dark:to-red-500/20 dark:group-hover:from-orange-500/30"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 p-4">
-            <CardTitle className="text-sm font-semibold text-gray-600 uppercase">Série</CardTitle>
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Série</CardTitle>
             <Flame className="w-5 h-5 text-orange-500" />
           </CardHeader>
           <CardContent className="relative z-10 p-4 pt-0">
-            <div className="text-2xl font-black text-gray-900">{Math.min(7, stats.completedQuizzes)}</div>
+            <div className="text-2xl font-black text-foreground">{stats.streak}</div>
           </CardContent>
         </Card>
       </div>
@@ -211,22 +208,22 @@ export default function Dashboard() {
                   <Play className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-bold text-gray-900">Quiz Recommandés</CardTitle>
-                  <p className="text-gray-600 font-medium text-sm">Sélectionnés par notre IA</p>
+                  <CardTitle className="text-xl font-bold text-foreground">Quiz Recommandés</CardTitle>
+                  <p className="text-muted-foreground font-medium text-sm">Sélectionnés par notre IA</p>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               {quizzes.length === 0 ? (
                 <div className="text-center py-10">
-                  <Play className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600">Aucun quiz disponible</h3>
-                  <p className="text-gray-500 text-sm">Revenez bientôt !</p>
+                  <Play className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-muted-foreground">Aucun quiz disponible</h3>
+                  <p className="text-muted-foreground/80 text-sm">Revenez bientôt !</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {quizzes.slice(0,4).map((quiz, index) => (
-                    <div key={quiz.id} className="group bg-white/60 backdrop-blur-sm border border-white/40 rounded-xl p-3 hover:bg-white/80 transition-all">
+                    <div key={quiz.id} className="group bg-background/60 backdrop-blur-sm border border-border/40 rounded-xl p-3 hover:bg-accent/50 transition-all">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-md ${
@@ -238,15 +235,15 @@ export default function Dashboard() {
                               <Play className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                              <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors text-sm">
+                              <h3 className="font-bold text-foreground group-hover:text-purple-600 transition-colors text-sm">
                                 {quiz.title}
                               </h3>
                               <div className="flex items-center gap-2 mt-1">
                                 <Badge variant="outline" className="text-xs">{quiz.category}</Badge>
                                 <Badge variant="outline" className={`text-xs capitalize ${
-                                  quiz.difficulty === 'facile' ? 'border-green-300 text-green-700' :
-                                  quiz.difficulty === 'moyen' ? 'border-yellow-300 text-yellow-700' :
-                                  'border-red-300 text-red-700'
+                                  quiz.difficulty === 'facile' ? 'border-green-400/50 text-green-600 dark:text-green-400' :
+                                  quiz.difficulty === 'moyen' ? 'border-yellow-400/50 text-yellow-600 dark:text-yellow-400' :
+                                  'border-red-400/50 text-red-600 dark:text-red-400'
                                 }`}>
                                   {quiz.difficulty}
                                 </Badge>
@@ -274,7 +271,7 @@ export default function Dashboard() {
               
               <div className="mt-6 text-center">
                 <Link href="/dashboard/quizzes" passHref>
-                  <Button variant="outline" size="sm" className="font-semibold rounded-lg hover:bg-purple-50 border-purple-200 text-purple-700">
+                  <Button variant="outline" size="sm" className="font-semibold rounded-lg hover:bg-accent border-primary/20 text-primary">
                     <Zap className="w-4 h-4 mr-2" />
                     Voir tous les quiz
                   </Button>
@@ -291,26 +288,26 @@ export default function Dashboard() {
                 <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center shadow-md">
                   <Award className="w-5 h-5 text-white" />
                 </div>
-                <CardTitle className="text-lg font-bold text-gray-900">Derniers Résultats</CardTitle>
+                <CardTitle className="text-lg font-bold text-foreground">Derniers Résultats</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               {recentAttempts.length === 0 ? (
                 <div className="text-center py-6">
-                   <Trophy className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium text-sm">Aucun résultat encore</p>
+                   <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium text-sm">Aucun résultat encore</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {recentAttempts.slice(0, 3).map((attempt) => (
                     <div key={attempt.id} className={`flex items-center justify-between p-3 rounded-lg border ${
-                      attempt.percentage >= 80 ? 'bg-green-50/50 border-green-200' :
-                      attempt.percentage >= 60 ? 'bg-yellow-50/50 border-yellow-200' :
-                      'bg-red-50/50 border-red-200'
+                      attempt.percentage >= 80 ? 'bg-green-500/10 border-green-500/20' :
+                      attempt.percentage >= 60 ? 'bg-yellow-500/10 border-yellow-500/20' :
+                      'bg-red-500/10 border-red-500/20'
                     }`}>
                       <div>
-                        <p className="font-semibold text-sm text-gray-900">Quiz #{attempt.quiz_id.slice(-6)}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-semibold text-sm text-foreground">Quiz #{attempt.quiz_id.slice(-6)}</p>
+                        <p className="text-xs text-muted-foreground">
                           {format(new Date(attempt.created_date), 'dd MMM', { locale: fr })} - {attempt.correct_answers}/{attempt.total_questions}
                         </p>
                       </div>
@@ -333,19 +330,19 @@ export default function Dashboard() {
                 <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
-                <CardTitle className="text-lg font-bold text-gray-900">Nouveau Contenu</CardTitle>
+                <CardTitle className="text-lg font-bold text-foreground">Nouveau Contenu</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
                {contents.length === 0 ? (
                  <div className="text-center py-6">
-                  <BookOpen className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium text-sm">Aucun contenu</p>
+                  <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium text-sm">Aucun contenu</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {contents.slice(0, 3).map((content) => (
-                    <div key={content.id} className="group p-3 border border-gray-200 rounded-lg hover:bg-white/80 cursor-pointer">
+                    <div key={content.id} className="group p-3 border border-border/50 rounded-lg hover:bg-accent/50 cursor-pointer">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 ${
                           content.type === 'pdf' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
@@ -354,7 +351,7 @@ export default function Dashboard() {
                           <BookOpen className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-purple-600">
+                          <p className="font-semibold text-sm text-foreground truncate group-hover:text-purple-600">
                             {content.title}
                           </p>
                            <Badge variant="outline" className="text-xs capitalize mt-1">

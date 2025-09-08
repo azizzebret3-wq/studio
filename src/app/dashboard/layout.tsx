@@ -8,7 +8,6 @@ import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
-  Home,
   BookOpen,
   ClipboardList as Play,
   FileText,
@@ -23,9 +22,11 @@ import {
   Menu,
   X,
   Bell,
-  Search,
   BrainCircuit,
+  Moon,
+  Sun,
 } from 'lucide-react';
+import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  const { setTheme, theme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,7 +144,7 @@ export default function DashboardLayout({
   const isAdmin = userData?.role === 'admin';
 
   return (
-     <div className="min-h-screen bg-gradient-to-br from-indigo-50/80 via-purple-50/60 to-pink-50/80">
+     <div className="min-h-screen bg-background">
       <style>
         {`
           .glassmorphism {
@@ -152,6 +154,12 @@ export default function DashboardLayout({
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
           }
           
+          .dark .glassmorphism {
+             background: rgba(10, 10, 20, 0.7);
+             backdrop-filter: blur(20px);
+             border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+
           .glassmorphism-dark {
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(20px);
@@ -207,31 +215,20 @@ export default function DashboardLayout({
           
           .background-mesh {
             background-image: 
-              radial-gradient(circle at 25% 25%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
-              radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.1) 0%, transparent 40%),
-              radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 40%);
+              radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.1) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.08) 0%, transparent 40%);
           }
         `}
       </style>
 
       <div className="min-h-screen background-mesh">
         {/* Header */}
-        <header className="glassmorphism sticky top-0 z-50 border-b border-white/20 shadow-lg">
+        <header className="glassmorphism sticky top-0 z-50 border-b">
           <div className="px-4 lg:px-8 py-3">
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link href="/dashboard" className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg floating">
-                    <Trophy className="w-6 h-6 text-white drop-shadow-lg" />
-                  </div>
-                </div>
-                <div className="hidden sm:block">
-                  <h1 className="text-lg font-black gradient-text tracking-tight">
-                    Gagne ton concours
-                  </h1>
-                </div>
-              </Link>
+              <Logo />
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1">
@@ -242,7 +239,7 @@ export default function DashboardLayout({
                       className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
                         pathname === item.url
                           ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
-                          : 'text-gray-700 hover:bg-white/60'
+                          : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
                       }`}
                     >
                       <item.icon className="w-4 h-4 mr-2" />
@@ -251,7 +248,7 @@ export default function DashboardLayout({
                   </Link>
                 ))}
                 
-                {isAdmin && <div className="w-px h-6 bg-gray-300 mx-2"></div>}
+                {isAdmin && <div className="w-px h-6 bg-border mx-2"></div>}
                 
                 {isAdmin && adminNavItems.map((item) => (
                   <Link key={item.title} href={item.url}>
@@ -260,7 +257,7 @@ export default function DashboardLayout({
                       className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
                         pathname === item.url
                           ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
-                          : 'text-gray-700 hover:bg-white/60'
+                          : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
                       }`}
                     >
                       <item.icon className="w-4 h-4 mr-2" />
@@ -278,6 +275,10 @@ export default function DashboardLayout({
                     Premium
                   </Badge>
                 )}
+                 
+                 <Button variant="ghost" size="icon" className="hidden md:inline-flex rounded-xl w-10 h-10 hover:scale-105 transition-all">
+                    <Bell className="w-5 h-5" />
+                 </Button>
 
                 <div className="hidden md:flex items-center gap-3">
                   <Avatar className="w-9 h-9 ring-2 ring-white/50 shadow-lg hover-lift">
@@ -287,10 +288,10 @@ export default function DashboardLayout({
                     </AvatarFallback>
                   </Avatar>
                   <div className="text-left hidden lg:block">
-                    <p className="font-bold text-gray-900 text-sm">
+                    <p className="font-bold text-foreground text-sm">
                        {userData?.fullName?.split(' ')[0] || 'Utilisateur'}
                     </p>
-                    <p className="text-xs text-gray-600 font-medium">
+                    <p className="text-xs text-muted-foreground font-medium">
                       {isPremium ? '👑 Premium' : '🆓 Gratuit'}
                     </p>
                   </div>
@@ -302,7 +303,7 @@ export default function DashboardLayout({
                   className="lg:hidden glassmorphism rounded-xl w-10 h-10 hover:scale-105 transition-all shadow-md"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 >
-                  {mobileMenuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </Button>
               </div>
             </div>
@@ -446,7 +447,7 @@ export default function DashboardLayout({
         
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
-         <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t border-white/20 z-30">
+         <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
              <div className="grid grid-cols-4 gap-1 p-2">
                  {[...userNavItems].slice(0,4).map((item) => (
                      <Link key={item.title} href={item.url}>
@@ -455,7 +456,7 @@ export default function DashboardLayout({
                              className={`flex flex-col gap-1 h-auto py-2 px-1 rounded-xl font-medium text-xs transition-all w-full ${
                                  pathname === item.url
                                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
-                                     : 'text-gray-600 hover:bg-white/60'
+                                     : 'text-muted-foreground hover:bg-white/60'
                              }`}
                          >
                              <item.icon className="w-5 h-5" />

@@ -215,23 +215,19 @@ export default function DashboardLayout({
       <div className="min-h-screen background-mesh">
         {/* Header */}
         <header className="glassmorphism sticky top-0 z-50 border-b border-white/20 shadow-lg">
-          <div className="px-4 lg:px-8 py-4">
+          <div className="px-4 lg:px-8 py-3">
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link href="/dashboard" className="flex items-center gap-4">
+              <Link href="/dashboard" className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg floating">
-                    <Trophy className="w-7 h-7 text-white drop-shadow-lg" />
+                  <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg floating">
+                    <Trophy className="w-6 h-6 text-white drop-shadow-lg" />
                   </div>
-                  <div className="absolute inset-0 w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl opacity-30 pulse-ring"></div>
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-xl font-black gradient-text tracking-tight">
+                  <h1 className="text-lg font-black gradient-text tracking-tight">
                     Gagne ton concours
                   </h1>
-                  <p className="text-xs text-gray-600 font-semibold capitalize">
-                    Concours {userData?.competitionType}
-                  </p>
                 </div>
               </Link>
 
@@ -241,31 +237,31 @@ export default function DashboardLayout({
                   <Link key={item.title} href={item.url}>
                     <Button
                       variant="ghost"
-                      className={`nav-glow rounded-2xl px-5 py-3 font-semibold text-sm transition-all ${
+                      className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
                         pathname === item.url
-                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
                           : 'text-gray-700 hover:bg-white/60'
                       }`}
                     >
-                      <item.icon className="w-5 h-5 mr-2" />
+                      <item.icon className="w-4 h-4 mr-2" />
                       {item.title}
                     </Button>
                   </Link>
                 ))}
                 
-                {isAdmin && <div className="w-px h-8 bg-gray-300 mx-2"></div>}
+                {isAdmin && <div className="w-px h-6 bg-gray-300 mx-2"></div>}
                 
                 {isAdmin && adminNavItems.map((item) => (
                   <Link key={item.title} href={item.url}>
                     <Button
                       variant="ghost"
-                      className={`nav-glow rounded-2xl px-5 py-3 font-semibold text-sm transition-all ${
+                      className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
                         pathname === item.url
-                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
                           : 'text-gray-700 hover:bg-white/60'
                       }`}
                     >
-                      <item.icon className="w-5 h-5 mr-2" />
+                      <item.icon className="w-4 h-4 mr-2" />
                       {item.title}
                     </Button>
                   </Link>
@@ -273,22 +269,22 @@ export default function DashboardLayout({
               </nav>
 
               {/* Profile & Hamburger */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 {isPremium && (
-                  <Badge className="hidden sm:flex bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 font-bold shadow-lg px-4 py-2">
-                    <Crown className="w-4 h-4 mr-2" />
+                  <Badge className="hidden sm:flex bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 font-bold shadow-lg px-3 py-1 text-xs">
+                    <Crown className="w-3 h-3 mr-1.5" />
                     Premium
                   </Badge>
                 )}
 
                 <div className="hidden md:flex items-center gap-3">
-                  <Avatar className="w-10 h-10 ring-2 ring-white/50 shadow-lg hover-lift">
+                  <Avatar className="w-9 h-9 ring-2 ring-white/50 shadow-lg hover-lift">
                     <AvatarImage src={userData?.photoURL} />
                     <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
                        {getInitials(userData?.fullName)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="text-left">
+                  <div className="text-left hidden lg:block">
                     <p className="font-bold text-gray-900 text-sm">
                        {userData?.fullName?.split(' ')[0] || 'Utilisateur'}
                     </p>
@@ -301,10 +297,10 @@ export default function DashboardLayout({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden glassmorphism rounded-2xl w-12 h-12 hover:scale-105 transition-all shadow-lg"
+                  className="lg:hidden glassmorphism rounded-xl w-10 h-10 hover:scale-105 transition-all shadow-md"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 >
-                  {mobileMenuOpen ? <X className="w-6 h-6 text-gray-700" /> : <Menu className="w-6 h-6 text-gray-700" />}
+                  {mobileMenuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
                 </Button>
               </div>
             </div>
@@ -454,7 +450,7 @@ export default function DashboardLayout({
                      <Link key={item.title} href={item.url}>
                          <Button
                              variant="ghost"
-                             className={`flex flex-col gap-1 h-auto py-3 px-1 rounded-2xl font-medium text-xs transition-all w-full ${
+                             className={`flex flex-col gap-1 h-auto py-2 px-1 rounded-xl font-medium text-xs transition-all w-full ${
                                  pathname === item.url
                                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
                                      : 'text-gray-600 hover:bg-white/60'

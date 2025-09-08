@@ -67,71 +67,71 @@ export default function QuizzesPage() {
 
 
   return (
-    <div className="p-6 md:p-8 space-y-8">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div className="space-y-2">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg floating">
-              <ClipboardList className="w-8 h-8 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+              <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl md:text-5xl font-black gradient-text">
+              <h1 className="text-2xl sm:text-3xl font-black gradient-text">
                 Tous les Quiz
               </h1>
-              <p className="text-xl text-gray-600 font-medium">
-                Mettez-vous au défi et suivez votre progression.
+              <p className="text-sm sm:text-base text-gray-600 font-medium">
+                Mettez-vous au défi.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <Card className="glassmorphism shadow-xl p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="relative md:col-span-2 lg:col-span-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+      <Card className="glassmorphism shadow-xl p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="relative sm:col-span-2 lg:col-span-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Rechercher un quiz..."
-              className="pl-10 h-12 rounded-xl"
+              placeholder="Rechercher..."
+              className="pl-9 h-10 rounded-lg text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
-            <SelectTrigger className="h-12 rounded-xl">
+            <SelectTrigger className="h-10 rounded-lg text-sm">
               <SelectValue placeholder="Catégorie" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat === 'all' ? 'Toutes les catégories' : cat}</SelectItem>)}
+              {categories.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat === 'all' ? 'Toutes les catégories' : cat}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filters.difficulty} onValueChange={(value) => handleFilterChange('difficulty', value)}>
-            <SelectTrigger className="h-12 rounded-xl">
+            <SelectTrigger className="h-10 rounded-lg text-sm">
               <SelectValue placeholder="Difficulté" />
             </SelectTrigger>
             <SelectContent>
-              {difficulties.map(diff => <SelectItem key={diff} value={diff}>{diff === 'all' ? 'Toutes les difficultés' : diff.charAt(0).toUpperCase() + diff.slice(1)}</SelectItem>)}
+              {difficulties.map(diff => <SelectItem key={diff} value={diff} className="text-sm">{diff === 'all' ? 'Toutes les difficultés' : diff.charAt(0).toUpperCase() + diff.slice(1)}</SelectItem>)}
             </SelectContent>
           </Select>
            <Select value={filters.access} onValueChange={(value) => handleFilterChange('access', value)}>
-            <SelectTrigger className="h-12 rounded-xl">
+            <SelectTrigger className="h-10 rounded-lg text-sm">
               <SelectValue placeholder="Accès" />
             </SelectTrigger>
             <SelectContent>
-               {accessTypes.map(acc => <SelectItem key={acc} value={acc}>{acc === 'all' ? 'Tous les accès' : acc.charAt(0).toUpperCase() + acc.slice(1)}</SelectItem>)}
+               {accessTypes.map(acc => <SelectItem key={acc} value={acc} className="text-sm">{acc === 'all' ? 'Tous les accès' : acc.charAt(0).toUpperCase() + acc.slice(1)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredQuizzes.map((quiz, index) => {
           const isLocked = quiz.access_type === 'premium' && !isPremium;
           return (
-            <Card key={quiz.id} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0">
-              <CardContent className="p-6">
+            <Card key={quiz.id} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0 flex flex-col">
+              <CardContent className="p-5 flex-grow">
                 <div className="flex justify-between items-start">
-                  <Badge variant="outline" className={`font-semibold capitalize ${
+                  <Badge variant="outline" className={`text-xs font-semibold capitalize ${
                     quiz.difficulty === 'facile' ? 'border-green-300 text-green-700' :
                     quiz.difficulty === 'moyen' ? 'border-yellow-300 text-yellow-700' :
                     'border-red-300 text-red-700'
@@ -139,26 +139,26 @@ export default function QuizzesPage() {
                     {quiz.difficulty}
                   </Badge>
                   {quiz.access_type === 'premium' && (
-                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
                       <Crown className="w-3 h-3 mr-1" />
                       Premium
                     </Badge>
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mt-4 mb-2 group-hover:text-purple-600 transition-colors">
+                <h3 className="text-base font-bold text-gray-900 mt-3 mb-2 group-hover:text-purple-600 transition-colors">
                   {quiz.title}
                 </h3>
-                <p className="text-sm text-gray-500 font-medium mb-4">
-                  Catégorie : {quiz.category}
+                <p className="text-xs text-gray-500 font-medium mb-3">
+                  {quiz.category}
                 </p>
-                <div className="flex items-center gap-6 text-sm text-gray-600 font-medium border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-4 text-xs text-gray-600 font-medium border-t border-gray-200 pt-3">
                   <span>{quiz.total_questions} questions</span>
                   <span>{quiz.duration_minutes} min</span>
                 </div>
               </CardContent>
               <Link href={isLocked ? '#' : `/dashboard/quizzes/${quiz.id}`} passHref>
                 <Button 
-                  className={`w-full font-bold text-white rounded-t-none h-14 text-base ${
+                  className={`w-full font-bold text-white rounded-t-none h-12 text-sm ${
                     isLocked 
                       ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
@@ -167,13 +167,13 @@ export default function QuizzesPage() {
                 >
                   {isLocked ? (
                     <>
-                      <Lock className="w-5 h-5 mr-2" />
-                      Réservé Premium
+                      <Lock className="w-4 h-4 mr-2" />
+                      Premium
                     </>
                   ) : (
                     <>
-                      <Rocket className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-                      Commencer le quiz
+                      <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+                      Commencer
                     </>
                   )}
                 </Button>
@@ -183,12 +183,12 @@ export default function QuizzesPage() {
         })}
       </div>
       {filteredQuizzes.length === 0 && (
-        <div className="text-center py-12 col-span-full">
-            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                <ClipboardList className="w-12 h-12 text-gray-400" />
+        <div className="text-center py-10 col-span-full">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ClipboardList className="w-10 h-10 text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">Aucun quiz trouvé</h3>
-            <p className="text-gray-500">Essayez de modifier vos filtres ou votre recherche.</p>
+            <h3 className="text-lg font-semibold text-gray-600 mb-1">Aucun quiz trouvé</h3>
+            <p className="text-gray-500 text-sm">Essayez de modifier vos filtres.</p>
         </div>
       )}
     </div>

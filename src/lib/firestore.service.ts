@@ -1,9 +1,10 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
-interface Quiz {
+export interface Quiz {
+  id?: string;
   title: string;
   description: string;
   questions: Array<{
@@ -21,7 +22,7 @@ interface Quiz {
 }
 
 
-export const saveQuizToFirestore = async (quizData: Quiz) => {
+export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
   try {
     const docRef = await addDoc(collection(db, "quizzes"), quizData);
     console.log("Quiz document written with ID: ", docRef.id);
@@ -31,3 +32,22 @@ export const saveQuizToFirestore = async (quizData: Quiz) => {
     throw new Error("Could not save quiz");
   }
 };
+
+export const getQuizzesFromFirestore = async (): Promise<Quiz[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, "quizzes"));
+        const quizzes = querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Firestore Timestamps need to be converted to JS Date objects
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+            } as Quiz;
+        });
+        return quizzes;
+    } catch (e) {
+        console.error("Error getting documents: ", e);
+        throw new Error("Could not fetch quizzes");
+    }
+}

@@ -26,15 +26,9 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getQuizzesFromFirestore, Quiz } from "@/lib/firestore.service";
 
 // Mock data, to be replaced with Firebase data later
-const mockQuizzes = [
-  { id: '1', title: 'Culture Générale - Niveau 1', access_type: 'gratuit', difficulty: 'facile', duration_minutes: 10, total_questions: 20, category: 'Culture' },
-  { id: '2', title: 'Logique & Mathématiques', access_type: 'premium', difficulty: 'moyen', duration_minutes: 20, total_questions: 15, category: 'Logique' },
-  { id: '3', title: 'Histoire du Burkina Faso', access_type: 'gratuit', difficulty: 'facile', duration_minutes: 15, total_questions: 25, category: 'Histoire' },
-  { id: '4', title: 'Droit Administratif', access_type: 'premium', difficulty: 'difficile', duration_minutes: 30, total_questions: 30, category: 'Droit' },
-];
-
 const mockRecentAttempts:any[] = [
 ];
 
@@ -48,8 +42,7 @@ const mockContents = [
 export default function Dashboard() {
   const { user, userData, loading } = useAuth();
   
-  // For now, we'll use mocked data. This can be replaced with API calls to Firestore.
-  const [quizzes] = useState(mockQuizzes);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [recentAttempts] = useState(mockRecentAttempts);
   const [contents] = useState(mockContents);
   
@@ -59,9 +52,20 @@ export default function Dashboard() {
     averageScore: 0,
     streak: 0,
   });
+  
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        const fetchedQuizzes = await getQuizzesFromFirestore();
+        setQuizzes(fetchedQuizzes);
+      } catch (error) {
+        console.error("Failed to fetch quizzes for dashboard", error);
+      }
+    };
+    fetchQuizzes();
+  }, []);
 
   useEffect(() => {
-      // This will be replaced with real user data fetching from Firestore
       const totalQuizzes = quizzes.length;
       const completedQuizzes = recentAttempts.length;
       const averageScore = recentAttempts.length > 0 
@@ -69,10 +73,10 @@ export default function Dashboard() {
         : 0;
 
       setStats({
-        totalQuizzes, // This can be the total available quizzes
-        completedQuizzes, // This should come from user's attempts
-        averageScore: Math.round(averageScore), // from user's attempts
-        streak: completedQuizzes, // This is a placeholder for a real streak calculation
+        totalQuizzes,
+        completedQuizzes,
+        averageScore: Math.round(averageScore),
+        streak: completedQuizzes,
       });
   }, [quizzes, recentAttempts]);
 

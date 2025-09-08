@@ -58,6 +58,8 @@ export interface LibraryDocument {
   createdAt: Date;
 }
 
+export type LibraryDocumentFormData = Omit<LibraryDocument, 'id' | 'createdAt'>;
+
 
 export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
   try {
@@ -168,10 +170,19 @@ export const getDocumentsFromFirestore = async (): Promise<LibraryDocument[]> =>
         const querySnapshot = await getDocs(collection(db, "documents"));
         return querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
+             let createdAt: Date;
+            if (data.createdAt instanceof Timestamp) {
+                createdAt = data.createdAt.toDate();
+            } else if(data.createdAt?.seconds) {
+                createdAt = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
+            }
+             else {
+                createdAt = new Date();
+            }
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt.toDate(),
+                createdAt,
             } as LibraryDocument;
         });
     } catch (e) {
@@ -179,6 +190,29 @@ export const getDocumentsFromFirestore = async (): Promise<LibraryDocument[]> =>
         throw new Error("Could not fetch library documents");
     }
 };
+
+export const addDocumentToFirestore = async (documentData: LibraryDocumentFormData) => {
+  try {
+    await addDoc(collection(db, "documents"), {
+      ...documentData,
+      createdAt: new Date(),
+    });
+  } catch (e) {
+    console.error("Error adding document: ", e);
+    throw new Error("Could not add document");
+  }
+};
+
+export const updateDocumentInFirestore = async (id: string, documentData: LibraryDocumentFormData) => {
+  try {
+    const docRef = doc(db, "documents", id);
+    await updateDoc(docRef, documentData as any);
+  } catch (e) {
+    console.error("Error updating document: ", e);
+    throw new Error("Could not update document");
+  }
+};
+
 
 export const deleteDocumentFromFirestore = async (id: string) => {
     try {

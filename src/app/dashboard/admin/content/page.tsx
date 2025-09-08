@@ -2,13 +2,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, PlusCircle, Trash2, Edit, Loader } from "lucide-react";
+import { FileText, PlusCircle, Trash2, Edit, Loader, Save } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { LibraryDocument, getDocumentsFromFirestore, deleteDocumentFromFirestore } from '@/lib/firestore.service';
+import { 
+  LibraryDocument, 
+  getDocumentsFromFirestore, 
+  deleteDocumentFromFirestore,
+  addDocumentToFirestore,
+  updateDocumentInFirestore,
+  LibraryDocumentFormData,
+} from '@/lib/firestore.service';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,11 +27,33 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminContentPage() {
   const { toast } = useToast();
   const [documents, setDocuments] = useState<LibraryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<LibraryDocument | null>(null);
+  const [formData, setFormData] = useState<LibraryDocumentFormData>({
+    title: '',
+    type: 'pdf',
+    category: '',
+    access_type: 'gratuit',
+    url: ''
+  });
 
   const fetchDocuments = async () => {
     setIsLoading(true);
@@ -45,6 +74,69 @@ export default function AdminContentPage() {
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  const resetForm = () => {
+    setEditingDocument(null);
+    setFormData({
+      title: '',
+      type: 'pdf',
+      category: '',
+      access_type: 'gratuit',
+      url: ''
+    });
+  };
+
+  const handleOpenDialog = (doc?: LibraryDocument) => {
+    if (doc) {
+      setEditingDocument(doc);
+      setFormData({
+        title: doc.title,
+        type: doc.type,
+        category: doc.category,
+        access_type: doc.access_type,
+        url: doc.url
+      });
+    } else {
+      resetForm();
+    }
+    setIsDialogOpen(true);
+  };
+  
+  const handleFormChange = (field: keyof LibraryDocumentFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      if (editingDocument) {
+        await updateDocumentInFirestore(editingDocument.id, formData);
+        toast({
+          title: 'Succès',
+          description: 'Le document a été mis à jour.',
+        });
+      } else {
+        await addDocumentToFirestore(formData);
+        toast({
+          title: 'Succès',
+          description: 'Le document a été ajouté.',
+        });
+      }
+      setIsDialogOpen(false);
+      resetForm();
+      fetchDocuments();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: editingDocument ? 'Impossible de mettre à jour le document.' : 'Impossible d\'ajouter le document.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   const handleDelete = async (id: string) => {
     try {
@@ -81,7 +173,7 @@ export default function AdminContentPage() {
             </div>
           </div>
         </div>
-        <Button className="bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold shadow-lg">
+        <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold shadow-lg">
           <PlusCircle className="w-4 h-4 mr-2"/>
           Ajouter une ressource
         </Button>
@@ -126,7 +218,7 @@ export default function AdminContentPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="flex gap-2 justify-end">
-                       <Button variant="ghost" size="icon">
+                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(doc)}>
                         <Edit className="h-4 w-4" />
                        </Button>
                        <AlertDialog>
@@ -158,6 +250,62 @@ export default function AdminContentPage() {
            )}
         </CardContent>
       </Card>
+      
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { setIsDialogOpen(isOpen); if(!isOpen) resetForm();}}>
+        <DialogContent className="sm:max-w-[425px]">
+           <form onSubmit={handleSubmit}>
+              <DialogHeader>
+                <DialogTitle>{editingDocument ? 'Modifier le document' : 'Ajouter un document'}</DialogTitle>
+                <DialogDescription>
+                  Remplissez les détails ci-dessous. Cliquez sur enregistrer lorsque vous avez terminé.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="title">Titre</Label>
+                  <Input id="title" value={formData.title} onChange={(e) => handleFormChange('title', e.target.value)} required />
+                </div>
+                 <div className="space-y-1.5">
+                  <Label htmlFor="category">Catégorie</Label>
+                  <Input id="category" value={formData.category} onChange={(e) => handleFormChange('category', e.target.value)} required />
+                </div>
+                 <div className="space-y-1.5">
+                  <Label htmlFor="url">URL du Fichier</Label>
+                  <Input id="url" value={formData.url} onChange={(e) => handleFormChange('url', e.target.value)} required placeholder="https://..."/>
+                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="type">Type</Label>
+                     <Select value={formData.type} onValueChange={(value: 'pdf' | 'video') => handleFormChange('type', value)}>
+                        <SelectTrigger id="type"><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pdf">PDF</SelectItem>
+                          <SelectItem value="video">Vidéo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="access_type">Accès</Label>
+                    <Select value={formData.access_type} onValueChange={(value: 'gratuit' | 'premium') => handleFormChange('access_type', value)}>
+                      <SelectTrigger id="access_type"><SelectValue/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gratuit">Gratuit</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>Annuler</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Enregistrement...</> : <><Save className="w-4 h-4 mr-2"/>Enregistrer</>}
+                </Button>
+              </DialogFooter>
+           </form>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

@@ -44,8 +44,7 @@ interface UserData {
 const userNavItems = [
   { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
-  { title: "Documents", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
-  { title: "Vidéos", url: "/dashboard/videos", icon: FileText, gradient: "from-blue-500 to-cyan-500" },
+  { title: "Bibliothèque", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy, gradient: "from-rose-500 to-pink-500" },
 ];
 
@@ -424,16 +423,16 @@ export default function DashboardLayout({
                       <Sparkles className="w-4 h-4 ml-2" />
                     </Button>
                   )}
-                  <Link href="/dashboard/profile">
-                    <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
-                      <UserIcon className="w-5 h-5 mr-4" />Mon Profil
-                    </Button>
-                  </Link>
                   <Link href="/dashboard/settings">
                      <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
                        <Settings className="w-5 h-5 mr-4" />Paramètres
                      </Button>
                    </Link>
+                   <Link href="/dashboard/profile">
+                    <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
+                      <UserIcon className="w-5 h-5 mr-4" />Mon Profil
+                    </Button>
+                  </Link>
                   <Button variant="ghost" className="w-full justify-start text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-4" onClick={handleLogout}>
                     <LogOut className="w-5 h-5 mr-4" />Se déconnecter
                   </Button>
@@ -450,8 +449,8 @@ export default function DashboardLayout({
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t border-white/20 z-30">
-             <div className="grid grid-cols-5 gap-1 p-2">
-                 {[...userNavItems].slice(0,5).map((item) => (
+             <div className="grid grid-cols-4 gap-1 p-2">
+                 {[...userNavItems].slice(0,4).map((item) => (
                      <Link key={item.title} href={item.url}>
                          <Button
                              variant="ghost"

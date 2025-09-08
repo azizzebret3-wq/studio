@@ -86,7 +86,7 @@ export default function DocumentsPage() {
           <div className="relative md:col-span-2 lg:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
-              placeholder="Rechercher un document..."
+              placeholder="Rechercher une ressource..."
               className="pl-10 h-12 rounded-xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -174,7 +174,7 @@ export default function DocumentsPage() {
             <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
                 <BookOpen className="w-12 h-12 text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">Aucun document trouvé</h3>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">Aucune ressource trouvée</h3>
             <p className="text-gray-500">Essayez de modifier vos filtres ou votre recherche.</p>
         </div>
       )}

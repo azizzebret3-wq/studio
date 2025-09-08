@@ -2,8 +2,8 @@ import Link from 'next/link';
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2" passHref>
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
+      <Link href="/" className="flex items-center gap-2" passHref>
         <svg
           className="h-8 w-8 text-primary"
           viewBox="0 0 100 100"
@@ -22,8 +22,8 @@ export function Logo() {
             d="M35 55a4 4 0 0 1-2.83-1.17l-5-5a4 4 0 0 1 5.66-5.66l5 5A4 4 0 0 1 35 55Zm30-30a4 4 0 0 1-2.83-1.17l-5-5a4 4 0 1 1 5.66-5.66l5 5A4 4 0 0 1 65 25Z"
           />
         </svg>
-        <span className="text-xl font-bold font-headline text-primary">Gagne ton concours</span>
-      </div>
-    </Link>
+        <span className="text-xl font-bold font-headline text-primary">GTC</span>
+      </Link>
+    </div>
   );
 }

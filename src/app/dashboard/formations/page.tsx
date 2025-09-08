@@ -2,7 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Trophy } from "lucide-react";
+import { Trophy, BookCheck } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function FormationsPage() {
   return (
@@ -24,14 +26,24 @@ export default function FormationsPage() {
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-4 bg-white/50 rounded-2xl shadow-inner">
-        <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-emerald-200 rounded-full flex items-center justify-center mb-4">
-          <Trophy className="w-10 h-10 text-green-600" />
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center p-4 bg-white/50 rounded-2xl shadow-inner relative overflow-hidden">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-purple-200/50 rounded-full blur-2xl animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-blue-200/50 rounded-full blur-2xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="relative z-10">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <Trophy className="w-12 h-12 text-green-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800">Bientôt Disponible</h2>
+          <p className="mt-4 text-lg text-gray-600 max-w-lg mx-auto">
+            Nos parcours de formation structurés arrivent très prochainement pour vous guider vers la réussite de votre concours.
+          </p>
+           <Button asChild size="lg" className="mt-8 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold shadow-lg rounded-xl">
+             <Link href="/dashboard/quizzes">
+                <BookCheck className="mr-2 h-5 w-5" />
+                S'entraîner sur les quiz en attendant
+             </Link>
+           </Button>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Bientôt disponible</h2>
-        <p className="mt-2 text-base text-gray-600 max-w-md mx-auto">
-          Nos parcours de formation structurés pour maîtriser les programmes seront bientôt disponibles.
-        </p>
       </div>
     </div>
   );

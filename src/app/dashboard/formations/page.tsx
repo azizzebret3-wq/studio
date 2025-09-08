@@ -2,9 +2,48 @@
 'use client';
 
 import React from 'react';
-import { Trophy, BookCheck } from "lucide-react";
+import { Trophy, BookCheck, Zap, ChevronRight, BarChart } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+
+const trainingPaths = [
+  {
+    title: "Préparation Complète au Concours Direct ENA",
+    description: "Un parcours structuré couvrant toutes les matières, des connaissances générales au droit administratif.",
+    icon: BarChart,
+    color: "from-blue-500 to-cyan-500",
+    progress: 75,
+    status: "En cours",
+  },
+  {
+    title: "Maîtriser les Tests Psychotechniques",
+    description: "Développez votre logique, votre raisonnement et votre rapidité pour exceller dans les tests psychotechniques.",
+    icon: Zap,
+    color: "from-purple-500 to-pink-500",
+    progress: 30,
+    status: "Non commencé",
+  },
+  {
+    title: "Culture Générale pour les Concours de la Fonction Publique",
+    description: "Approfondissez votre connaissance du monde contemporain, de l'histoire et des institutions.",
+    icon: BookCheck,
+    color: "from-orange-500 to-red-500",
+    progress: 0,
+    status: "Non commencé",
+  },
+   {
+    title: "Devenir un Expert en Note de Synthèse",
+    description: "Apprenez la méthodologie et les techniques pour rédiger des notes de synthèse parfaites.",
+    icon: BarChart,
+    color: "from-green-500 to-emerald-500",
+    progress: 100,
+    status: "Terminé",
+  },
+];
+
 
 export default function FormationsPage() {
   return (
@@ -25,26 +64,40 @@ export default function FormationsPage() {
             </div>
           </div>
         </div>
+        <Button>
+          <Zap className="w-4 h-4 mr-2" />
+          Proposer un parcours
+        </Button>
       </div>
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center p-4 bg-white/50 rounded-2xl shadow-inner relative overflow-hidden">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-purple-200/50 rounded-full blur-2xl animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-blue-200/50 rounded-full blur-2xl animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="relative z-10">
-          <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Trophy className="w-12 h-12 text-green-600" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-800">Bientôt Disponible</h2>
-          <p className="mt-4 text-lg text-gray-600 max-w-lg mx-auto">
-            Nos parcours de formation structurés arrivent très prochainement pour vous guider vers la réussite de votre concours.
-          </p>
-           <Button asChild size="lg" className="mt-8 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold shadow-lg rounded-xl">
-             <Link href="/dashboard/quizzes">
-                <BookCheck className="mr-2 h-5 w-5" />
-                S'entraîner sur les quiz en attendant
-             </Link>
-           </Button>
-        </div>
-      </div>
+
+       <div className="space-y-6">
+        {trainingPaths.map((path, index) => (
+           <Card key={index} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0">
+             <Link href="#" className="block p-6">
+              <div className="flex flex-col md:flex-row gap-6 items-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-r ${path.color} flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                  <path.icon className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h2 className="text-lg font-bold text-foreground group-hover:text-purple-600 transition-colors">{path.title}</h2>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4">{path.description}</p>
+                   <div className="flex items-center gap-4">
+                    <Progress value={path.progress} className="w-full h-2" />
+                    <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">{path.progress}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                   <Badge variant={path.status === 'Terminé' ? 'default' : 'secondary'} className={path.status === 'Terminé' ? 'bg-green-500 text-white' : ''}>
+                    {path.status}
+                  </Badge>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </Link>
+           </Card>
+        ))}
+       </div>
+
     </div>
   );
 }

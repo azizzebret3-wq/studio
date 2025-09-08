@@ -73,7 +73,6 @@ export default function DashboardLayout({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-
   const handleLogout = async () => {
     const auth = getAuth();
     try {
@@ -90,6 +89,13 @@ export default function DashboardLayout({
         description: "Une erreur est survenue.",
       });
     }
+  };
+
+  const isNavItemActive = (itemUrl: string) => {
+    if (itemUrl === "/dashboard") {
+      return pathname === itemUrl;
+    }
+    return pathname.startsWith(itemUrl);
   };
 
   if (loading || !user || !userData) {
@@ -112,7 +118,7 @@ export default function DashboardLayout({
 
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
-  const navItems = isAdmin ? [...userNavItems.slice(0, 2), { title: "Admin", url: "/dashboard/admin", icon: Settings, gradient: "from-gray-500 to-gray-700" }, ...adminNavItems] : userNavItems;
+  const navItems = isAdmin ? [...userNavItems.slice(0,1), { title: "Admin", url: "/dashboard/admin", icon: Settings, gradient: "from-gray-500 to-gray-700" }, ...userNavItems.slice(1)] : userNavItems;
   const mobileUserNav = userNavItems;
 
   return (
@@ -209,7 +215,7 @@ export default function DashboardLayout({
                     <Button
                       variant="ghost"
                       className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
-                        pathname.startsWith(item.url)
+                        isNavItemActive(item.url)
                           ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
                           : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
                       }`}
@@ -320,13 +326,13 @@ export default function DashboardLayout({
                       <Button
                         variant="ghost"
                         className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
-                          pathname === item.url
+                          isNavItemActive(item.url)
                             ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
                             : 'text-gray-300 hover:bg-white/10 hover:text-white'
                         }`}
                       >
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
-                          pathname === item.url ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
+                          isNavItemActive(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
                         }`}>
                           <item.icon className="w-5 h-5" />
                         </div>
@@ -346,13 +352,13 @@ export default function DashboardLayout({
                          <Button
                             variant="ghost"
                             className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
-                              pathname.startsWith(item.url)
+                              isNavItemActive(item.url)
                                 ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
                                 : 'text-gray-300 hover:bg-white/10 hover:text-white'
                             }`}
                           >
                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
-                              pathname.startsWith(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
+                              isNavItemActive(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
                            }`}>
                               <item.icon className="w-5 h-5" />
                             </div>
@@ -402,7 +408,7 @@ export default function DashboardLayout({
                          <Button
                              variant="ghost"
                              className={`flex flex-col gap-1 h-auto py-2 px-1 rounded-xl font-medium text-xs transition-all w-full ${
-                                 pathname.startsWith(item.url)
+                                 isNavItemActive(item.url)
                                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
                                      : 'text-muted-foreground hover:bg-white/60'
                              }`}

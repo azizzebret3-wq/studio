@@ -1,7 +1,7 @@
 // src/app/dashboard/take-quiz/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,10 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader } from 'lucide-react';
+import { getQuizzesFromFirestore, Quiz } from '@/lib/firestore.service';
+import { useToast } from '@/hooks/use-toast';
+
+type ActiveQuiz = GenerateQuizOutput['quiz'];
 
 type QuestionResult = {
   question: string;
@@ -23,7 +27,9 @@ type QuestionResult = {
 export default function TakeQuizPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [quiz, setQuiz] = useState<GenerateQuizOutput['quiz'] | null>(null);
+  const { toast } = useToast();
+  
+  const [quiz, setQuiz] = useState<ActiveQuiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const [userAnswers, setUserAnswers] = useState<string[][]>([]);
@@ -32,23 +38,46 @@ export default function TakeQuizPage() {
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadQuiz = useCallback(async () => {
+    setLoading(true);
     const source = searchParams.get('source');
+    const quizId = searchParams.get('id');
+
     if (source === 'generated') {
       const quizData = sessionStorage.getItem('generatedQuiz');
       if (quizData) {
         const parsedData: GenerateQuizOutput = JSON.parse(quizData);
         setQuiz(parsedData.quiz);
         setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
-        sessionStorage.removeItem('generatedQuiz'); // Clean up after use
+        // Do not remove from session storage immediately, in case of refresh
       } else {
-        // If no data, maybe redirect back or show an error
+        toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
         router.push('/dashboard/quizzes');
       }
+    } else if (quizId) {
+      try {
+        const allQuizzes = await getQuizzesFromFirestore();
+        const foundQuiz = allQuizzes.find(q => q.id === quizId);
+        if (foundQuiz) {
+          setQuiz(foundQuiz);
+          setTimeLeft(foundQuiz.duration_minutes * 60);
+        } else {
+          toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
+          router.push('/dashboard/quizzes');
+        }
+      } catch (error) {
+        toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
+        router.push('/dashboard/quizzes');
+      }
+    } else {
+      router.push('/dashboard/quizzes');
     }
-    // Logic for quizzes from DB can be added here
     setLoading(false);
-  }, [searchParams, router]);
+  }, [searchParams, router, toast]);
+
+  useEffect(() => {
+    loadQuiz();
+  }, [loadQuiz]);
 
   useEffect(() => {
     if (quiz && !quizFinished && timeLeft > 0) {
@@ -75,6 +104,11 @@ export default function TakeQuizPage() {
   };
 
   const handleFinishQuiz = (finalAnswers?: string[][]) => {
+    // Clear session storage if it was a generated quiz
+    if (searchParams.get('source') === 'generated') {
+      sessionStorage.removeItem('generatedQuiz');
+    }
+    
     const answersToProcess = finalAnswers || [...userAnswers, selectedAnswers];
     setQuizFinished(true);
 

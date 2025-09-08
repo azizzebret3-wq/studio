@@ -292,8 +292,8 @@ export default function QuizzesPage() {
                       <span>{quiz.duration_minutes} min</span>
                     </div>
                   </CardContent>
-                  <Link href={isLocked ? '#' : `/dashboard/quizzes/${quiz.id}`} passHref>
-                    <Button 
+                   <Button 
+                      asChild
                       className={`w-full font-bold text-white rounded-t-none h-12 text-sm ${
                         isLocked 
                           ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
@@ -301,19 +301,20 @@ export default function QuizzesPage() {
                       }`}
                       disabled={isLocked}
                     >
-                      {isLocked ? (
-                        <>
-                          <Lock className="w-4 h-4 mr-2" />
-                          Premium
-                        </>
-                      ) : (
-                        <>
-                          <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
-                          Commencer
-                        </>
-                      )}
+                      <Link href={isLocked ? '#' : `/dashboard/take-quiz?id=${quiz.id}`}>
+                        {isLocked ? (
+                          <>
+                            <Lock className="w-4 h-4 mr-2" />
+                            Premium
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+                            Commencer
+                          </>
+                        )}
+                      </Link>
                     </Button>
-                  </Link>
                 </Card>
               );
             })}

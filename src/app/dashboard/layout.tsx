@@ -21,10 +21,8 @@ import {
   Menu,
   X,
   Bell,
-  BrainCircuit,
   Moon,
   Sun,
-  Wand2,
 } from 'lucide-react';
 import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
@@ -55,7 +53,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-  const { setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   const { user, userData, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -239,6 +237,12 @@ export default function DashboardLayout({
                  <Button variant="ghost" size="icon" className="hidden md:inline-flex rounded-xl w-10 h-10 hover:scale-105 transition-all">
                     <Bell className="w-5 h-5" />
                  </Button>
+
+                <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}  className="hidden md:inline-flex rounded-xl w-10 h-10 hover:scale-105 transition-all">
+                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
 
                 <div className="hidden md:flex items-center gap-3">
                   <Avatar className="w-9 h-9 ring-2 ring-white/50 shadow-lg hover-lift">

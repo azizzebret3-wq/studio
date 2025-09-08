@@ -2,16 +2,11 @@
 'use client';
 
 import React from 'react';
-import { Settings, Bell, Shield, Palette, Lock, Moon, Sun } from "lucide-react";
+import { Settings, Shield, Lock } from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { useTheme } from "next-themes"
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function SettingsPage() {
-  const { setTheme, theme } = useTheme()
-
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -25,50 +20,14 @@ export default function SettingsPage() {
                 Paramètres
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground font-medium">
-                Personnalisez votre expérience.
+                Gérez votre compte et vos préférences.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 glassmorphism shadow-xl border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <Bell className="w-5 h-5 text-purple-600"/>
-              Notifications
-            </CardTitle>
-            <CardDescription>
-              Gérez comment vous recevez les communications.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-              <div>
-                <Label htmlFor="new-quiz-notif" className="font-semibold text-sm">Nouveaux quiz</Label>
-                <p className="text-xs text-muted-foreground">Quand un quiz de votre catégorie est ajouté.</p>
-              </div>
-              <Switch id="new-quiz-notif" />
-            </div>
-             <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-              <div>
-                <Label htmlFor="results-notif" className="font-semibold text-sm">Résultats & corrections</Label>
-                <p className="text-xs text-muted-foreground">Recevoir une notification après un quiz.</p>
-              </div>
-              <Switch id="results-notif" defaultChecked />
-            </div>
-             <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-              <div>
-                <Label htmlFor="newsletter-notif" className="font-semibold text-sm">Newsletter</Label>
-                <p className="text-xs text-muted-foreground">Conseils et actualités sur les concours.</p>
-              </div>
-              <Switch id="newsletter-notif" defaultChecked />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
+      <div className="max-w-md">
           <Card className="glassmorphism shadow-xl border-0">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-xl">
@@ -85,31 +44,6 @@ export default function SettingsPage() {
               </Button>
             </CardContent>
           </Card>
-          
-           <Card className="glassmorphism shadow-xl border-0">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Palette className="w-5 h-5 text-blue-600"/>
-                Apparence
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-               <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                <div>
-                  <Label htmlFor="dark-mode" className="font-semibold text-sm flex items-center gap-2">
-                    {theme === 'dark' ? <Moon/> : <Sun/>}
-                    Mode Sombre
-                  </Label>
-                </div>
-                <Switch 
-                  id="dark-mode"
-                  checked={theme === 'dark'}
-                  onCheckedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

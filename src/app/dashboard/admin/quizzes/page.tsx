@@ -83,6 +83,7 @@ export default function AdminQuizzesPage() {
           title: 'Quiz Sauvegardé !',
           description: 'Le quiz est maintenant disponible pour les utilisateurs.',
       });
+      setGeneratedQuiz(null);
     } catch (error) {
       console.error("Error saving quiz: ", error);
       toast({
@@ -257,7 +258,8 @@ export default function AdminQuizzesPage() {
                      {!isLoading && !generatedQuiz && (
                         <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
                             <Wand2 className="w-16 h-16 text-gray-300" />
-                            <p className="mt-4 text-lg font-semibold text-gray-600">En attente de génération</p>                            <p className="text-sm text-gray-500">Utilisez le formulaire pour créer un nouveau quiz.</p>
+                            <p className="mt-4 text-lg font-semibold text-gray-600">En attente de génération</p>
+                            <p className="text-sm text-gray-500">Utilisez le formulaire pour créer un nouveau quiz.</p>
                         </div>
                     )}
                 </CardContent>

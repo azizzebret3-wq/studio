@@ -225,7 +225,7 @@ export default function DashboardLayout({
                 ))}
               </nav>
 
-              {/* Profile & Hamburger */}
+              {/* Profile & Actions */}
               <div className="flex items-center gap-3">
                 {isPremium && !isAdmin && (
                   <Badge className="hidden sm:flex bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 font-bold shadow-lg px-3 py-1 text-xs">
@@ -234,11 +234,11 @@ export default function DashboardLayout({
                   </Badge>
                 )}
                  
-                 <Button variant="ghost" size="icon" className="hidden md:inline-flex rounded-xl w-10 h-10 hover:scale-105 transition-all">
+                 <Button variant="ghost" size="icon" className="rounded-xl w-10 h-10 hover:scale-105 transition-all">
                     <Bell className="w-5 h-5" />
                  </Button>
 
-                <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}  className="hidden md:inline-flex rounded-xl w-10 h-10 hover:scale-105 transition-all">
+                <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}  className="rounded-xl w-10 h-10 hover:scale-105 transition-all">
                   <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                   <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                   <span className="sr-only">Toggle theme</span>

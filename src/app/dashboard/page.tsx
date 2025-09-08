@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getQuizzesFromFirestore, Quiz, getAttemptsFromFirestore, Attempt } from "@/lib/firestore.service";
+import { useToast } from "@/hooks/use-toast";
 
 const mockContents = [
     { id: 'c1', title: 'Résumé de la Constitution', type: 'pdf', access_type: 'gratuit' },
@@ -38,6 +39,7 @@ const mockContents = [
 
 export default function Dashboard() {
   const { user, userData, loading } = useAuth();
+  const { toast } = useToast();
   
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [recentAttempts, setRecentAttempts] = useState<Attempt[]>([]);
@@ -56,14 +58,25 @@ export default function Dashboard() {
       if (!user) return;
       setLoadingData(true);
       try {
-        const [fetchedQuizzes, fetchedAttempts] = await Promise.all([
-          getQuizzesFromFirestore(),
-          getAttemptsFromFirestore(user.uid)
-        ]);
+        const fetchedQuizzes = await getQuizzesFromFirestore();
         setQuizzes(fetchedQuizzes);
-        setRecentAttempts(fetchedAttempts);
+        
+        try {
+          const fetchedAttempts = await getAttemptsFromFirestore(user.uid);
+          setRecentAttempts(fetchedAttempts);
+        } catch (attemptsError) {
+          console.error("Could not fetch attempts, maybe index is building?", attemptsError);
+          // Don't toast here, just show an empty state for attempts
+          setRecentAttempts([]); 
+        }
+
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
+        toast({
+            variant: "destructive",
+            title: "Erreur de chargement",
+            description: "Impossible de charger les données du tableau de bord."
+        })
       } finally {
         setLoadingData(false);
       }
@@ -71,7 +84,7 @@ export default function Dashboard() {
     if (!loading && user) {
       fetchData();
     }
-  }, [user, loading]);
+  }, [user, loading, toast]);
 
   useEffect(() => {
       const totalQuizzes = quizzes.length;

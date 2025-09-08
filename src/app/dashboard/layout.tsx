@@ -375,10 +375,12 @@ export default function DashboardLayout({
                 
                 <div className="space-y-3 border-t border-white/20 pt-6">
                   {!isPremium && !isAdmin && (
-                    <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
-                      <Crown className="w-5 h-5 mr-3" />Passer Premium
-                      <Sparkles className="w-4 h-4 ml-2" />
-                    </Button>
+                    <Link href="/dashboard/premium">
+                      <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
+                        <Crown className="w-5 h-5 mr-3" />Passer Premium
+                        <Sparkles className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
                   )}
                   <Link href="/dashboard/settings">
                      <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">

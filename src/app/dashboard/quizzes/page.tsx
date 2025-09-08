@@ -32,17 +32,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { getQuizzesFromFirestore, Quiz } from '@/lib/firestore.service';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 
 export default function QuizzesPage() {
   const { user, userData, loading: authLoading } = useAuth();
@@ -211,7 +200,8 @@ export default function QuizzesPage() {
                 </Button>
             </form>
           ) : (
-             <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+            <Link href="/dashboard/premium" passHref>
+              <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 cursor-pointer transition-colors">
                 <div className="text-center md:text-left">
                   <h3 className="font-bold text-yellow-800 dark:text-yellow-300">Accès Premium requis</h3>
                   <p className="text-sm text-yellow-700 dark:text-yellow-400">Le générateur de quiz par IA est une fonctionnalité exclusive.</p>
@@ -221,6 +211,7 @@ export default function QuizzesPage() {
                   Devenir Premium
                 </Button>
               </div>
+            </Link>
           )}
         </CardContent>
       </Card>
@@ -301,47 +292,33 @@ export default function QuizzesPage() {
                       <span>{quiz.duration_minutes} min</span>
                     </div>
                   </CardContent>
-                   <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                         <Button 
-                            className={`w-full font-bold text-white rounded-t-none h-12 text-sm ${
-                              isLocked 
-                                ? 'bg-gradient-to-r from-gray-400 to-gray-500'
-                                : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
-                            }`}
-                            onClick={(e) => {
-                              if (isLocked) e.preventDefault();
-                              else router.push(`/dashboard/take-quiz?id=${quiz.id}`);
-                            }}
-                          >
-                             {isLocked ? (
-                                <>
-                                  <Lock className="w-4 h-4 mr-2" />
-                                  Premium
-                                </>
-                              ) : (
-                                <>
-                                  <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
-                                  Commencer
-                                </>
-                              )}
-                          </Button>
-                      </AlertDialogTrigger>
-                      {isLocked && (
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Contenu Premium</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Ce quiz est réservé aux membres Premium. Passez Premium pour accéder à tous les quiz, cours et vidéos en illimité !
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction>Passer Premium</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
+                  <Button 
+                    className={`w-full font-bold text-white rounded-t-none h-12 text-sm ${
+                      isLocked 
+                        ? 'bg-gradient-to-r from-gray-400 to-gray-500'
+                        : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
+                    }`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (isLocked) {
+                        router.push('/dashboard/premium');
+                      } else {
+                        router.push(`/dashboard/take-quiz?id=${quiz.id}`);
+                      }
+                    }}
+                  >
+                      {isLocked ? (
+                        <>
+                          <Lock className="w-4 h-4 mr-2" />
+                          Premium
+                        </>
+                      ) : (
+                        <>
+                          <Rocket className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+                          Commencer
+                        </>
                       )}
-                    </AlertDialog>
+                  </Button>
                 </Card>
               );
             })}

@@ -159,23 +159,25 @@ export default function Dashboard() {
         </div>
         
         {!isPremium && !isAdmin && (
-          <Card className="card-hover glassmorphism border-2 border-yellow-400/50 shadow-xl w-full lg:w-auto">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                  <Crown className="w-7 h-7 text-white" />
+          <Link href="/dashboard/premium" passHref>
+            <Card className="card-hover glassmorphism border-2 border-yellow-400/50 shadow-xl w-full lg:w-auto">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <Crown className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-yellow-800 dark:text-yellow-300">Passer Premium</h3>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">Débloquer tout</p>
+                  </div>
+                  <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg ml-auto">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Allons-y
+                  </Button>
                 </div>
-                <div>
-                  <h3 className="font-bold text-yellow-800 dark:text-yellow-300">Passer Premium</h3>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-400">Débloquer tout</p>
-                </div>
-                <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg ml-auto">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Allons-y
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         )}
       </div>
 

@@ -3,14 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getGeneratedQuiz } from '../generate-quiz/page';
 import { GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, Clock, Info, Award, BarChart } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader } from 'lucide-react';
 
 type QuestionResult = {
   question: string;
@@ -31,19 +30,24 @@ export default function TakeQuizPage() {
   const [quizFinished, setQuizFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes default
   const [results, setResults] = useState<QuestionResult[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const source = searchParams.get('source');
     if (source === 'generated') {
-      const generatedQuiz = getGeneratedQuiz();
-      if (generatedQuiz?.quiz) {
-        setQuiz(generatedQuiz.quiz);
-        setTimeLeft(generatedQuiz.quiz.questions.length * 60); // 1 minute per question
+      const quizData = sessionStorage.getItem('generatedQuiz');
+      if (quizData) {
+        const parsedData: GenerateQuizOutput = JSON.parse(quizData);
+        setQuiz(parsedData.quiz);
+        setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
+        sessionStorage.removeItem('generatedQuiz'); // Clean up after use
       } else {
-        router.push('/dashboard/generate-quiz');
+        // If no data, maybe redirect back or show an error
+        router.push('/dashboard/quizzes');
       }
     }
     // Logic for quizzes from DB can be added here
+    setLoading(false);
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function TakeQuizPage() {
     } else if (timeLeft === 0 && !quizFinished) {
       handleFinishQuiz();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quiz, quizFinished, timeLeft]);
 
 
@@ -97,8 +102,13 @@ export default function TakeQuizPage() {
     );
   };
 
-  if (!quiz) {
-    return <div className="flex justify-center items-center h-screen"><p>Chargement du quiz...</p></div>;
+  if (loading || !quiz) {
+    return (
+      <div className="flex flex-col gap-4 justify-center items-center h-screen">
+          <Loader className="w-12 h-12 animate-spin text-purple-500" />
+          <p className="font-medium text-muted-foreground">Chargement du quiz...</p>
+      </div>
+    );
   }
 
   const formatTime = (seconds: number) => {
@@ -123,8 +133,8 @@ export default function TakeQuizPage() {
               {score} / {quiz.questions.length}
             </p>
             <Progress value={(score / quiz.questions.length) * 100} className="w-full max-w-sm mx-auto" />
-             <Button onClick={() => router.push('/dashboard/generate-quiz')}>
-                Générer un autre quiz
+             <Button onClick={() => router.push('/dashboard/quizzes')}>
+                Retourner à la liste des quiz
             </Button>
           </CardContent>
         </Card>

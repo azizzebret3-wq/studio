@@ -37,7 +37,6 @@ import { Logo } from '@/components/logo';
 const userNavItems = [
   { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
-  { title: "Générateur IA", url: "/dashboard/generate-quiz", icon: Wand2, gradient: "from-indigo-500 to-purple-500" },
   { title: "Bibliothèque", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy, gradient: "from-rose-500 to-pink-500" },
 ];
@@ -114,7 +113,7 @@ export default function DashboardLayout({
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
   const navItems = isAdmin ? [...userNavItems.slice(0, 2), ...adminNavItems] : userNavItems;
-  const mobileUserNav = isAdmin ? userNavItems.filter(item => item.url !== '/dashboard/generate-quiz') : userNavItems;
+  const mobileUserNav = userNavItems;
 
   return (
      <div className="min-h-screen bg-background">
@@ -397,7 +396,7 @@ export default function DashboardLayout({
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
-             <div className="grid grid-cols-5 gap-1 p-2">
+             <div className="grid grid-cols-4 gap-1 p-2">
                  {userNavItems.map((item) => (
                      <Link key={item.title} href={item.url}>
                          <Button

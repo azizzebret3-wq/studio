@@ -1,11 +1,12 @@
+
 // src/app/dashboard/admin/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, FileText, ClipboardList, BrainCircuit, ArrowRight } from 'lucide-react';
 
@@ -13,18 +14,19 @@ export default function AdminDashboardPage() {
   const { userData, loading } = useAuth();
   const router = useRouter();
 
-  if (loading) {
-    return <div className="p-8 text-center">Chargement...</div>;
-  }
-
-  // This is a client component, so this check runs on the client-side.
-  // A server-side check would be better for security.
-  if (userData?.role !== 'admin') {
-    // Redirect non-admins to the main dashboard
-     if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (!loading && userData?.role !== 'admin') {
       router.push('/dashboard');
     }
-    return null; 
+  }, [userData, loading, router]);
+
+
+  if (loading || !userData || userData.role !== 'admin') {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-purple-500"></div>
+      </div>
+    );
   }
   
   const adminLinks = [
@@ -72,15 +74,15 @@ export default function AdminDashboardPage() {
        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {adminLinks.map((link) => (
             <Card key={link.title} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0">
-                <Link href={link.href}>
+                <Link href={link.href} passHref>
                     <div className="p-6 flex justify-between items-center">
                         <div className="flex items-center gap-4">
                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-r ${link.color}`}>
                                 <link.icon className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <CardTitle className="text-lg font-bold group-hover:text-purple-600 transition-colors">{link.title}</CardTitle>
-                                <CardDescription>{link.description}</CardDescription>
+                                <h2 className="text-lg font-bold group-hover:text-purple-600 transition-colors">{link.title}</h2>
+                                <p className="text-sm text-muted-foreground">{link.description}</p>
                             </div>
                         </div>
                         <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-transform" />
@@ -92,4 +94,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-

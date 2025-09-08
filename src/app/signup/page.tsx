@@ -55,6 +55,7 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Add user to Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         fullName,
@@ -62,6 +63,8 @@ export default function SignupPage() {
         phone,
         competitionType,
         createdAt: new Date(),
+        role: 'user', // Default role
+        subscription_type: 'gratuit', // Default subscription
       });
       
       toast({

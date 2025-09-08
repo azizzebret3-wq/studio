@@ -1,7 +1,8 @@
+
 // src/app/dashboard/admin/generate-quiz/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,12 @@ export default function GenerateQuizPage() {
   const [numberOfQuestions, setNumberOfQuestions] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && userData?.role !== 'admin') {
+      router.push('/dashboard');
+    }
+  }, [userData, authLoading, router]);
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,19 +80,14 @@ export default function GenerateQuizPage() {
     });
   };
 
-  if (authLoading) {
-    return <div className="p-8 text-center">Chargement...</div>;
-  }
-
-  if (userData?.role !== 'admin') {
-    // router.push('/dashboard'); // This can cause render loops, better to show an error message
+  if (authLoading || !userData || userData.role !== 'admin') {
     return (
-        <div className="p-8 text-center">
-            <h1 className="text-2xl font-bold">Accès non autorisé</h1>
-            <p>Vous devez être administrateur pour accéder à cette page.</p>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-purple-500"></div>
+      </div>
     );
   }
+
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">

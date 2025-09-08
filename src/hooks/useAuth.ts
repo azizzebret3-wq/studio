@@ -1,3 +1,4 @@
+
 // src/hooks/useAuth.ts
 'use client';
 
@@ -23,42 +24,48 @@ export function useAuth() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = useCallback(async (user: User) => {
-    const userDocRef = doc(db, 'users', user.uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-      setUserData(userDoc.data() as UserData);
+  const fetchUserData = useCallback(async (user: User | null) => {
+    if (!user) {
+        setUserData(null);
+        setLoading(false);
+        return;
+    }
+    
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setUserData(userDoc.data() as UserData);
+        } else {
+            // Fallback for user record without a firestore doc
+            setUserData({ email: user.email || '', role: 'user', subscription_type: 'gratuit' });
+        }
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        setUserData(null);
+    } finally {
+        setLoading(false);
     }
   }, []);
 
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        await fetchUserData(user);
-      } else {
-        // Redirige vers la page de connexion si l'utilisateur n'est pas connecté
-        // et qu'il n'est pas déjà sur une page publique
-        if (window.location.pathname.startsWith('/dashboard')) {
-          router.push('/login');
-        }
-      }
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setLoading(true);
+      setUser(user);
+      fetchUserData(user);
     });
 
     return () => unsubscribe();
-  }, [router, fetchUserData]);
+  }, [fetchUserData]);
   
   const reloadUserData = useCallback(() => {
     if(user) {
         setLoading(true);
-        fetchUserData(user).finally(() => setLoading(false));
+        fetchUserData(user);
     }
   }, [user, fetchUserData]);
 
   return { user, userData, loading, reloadUserData };
 }
-
-    

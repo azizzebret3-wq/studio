@@ -1,6 +1,6 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
 export interface Quiz {
@@ -45,6 +45,17 @@ export interface Attempt {
     percentage: number;
     correctAnswers: number;
     createdAt: Date;
+}
+
+// Define the structure of a Library Document
+export interface LibraryDocument {
+  id: string;
+  title: string;
+  type: 'pdf' | 'video';
+  access_type: 'gratuit' | 'premium';
+  category: string;
+  url: string; // URL to the file in Firebase Storage
+  createdAt: Date;
 }
 
 
@@ -147,6 +158,33 @@ export const getAttemptsFromFirestore = async (userId: string): Promise<Attempt[
         });
     } catch (e) {
         console.error("Error getting attempts: ", e);
-        throw new Error("Could not fetch attempts");
+        // Don't throw, just return empty array if index is building
+        return [];
+    }
+};
+
+export const getDocumentsFromFirestore = async (): Promise<LibraryDocument[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, "documents"));
+        return querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt.toDate(),
+            } as LibraryDocument;
+        });
+    } catch (e) {
+        console.error("Error getting library documents: ", e);
+        throw new Error("Could not fetch library documents");
+    }
+};
+
+export const deleteDocumentFromFirestore = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "documents", id));
+    } catch (e) {
+        console.error("Error deleting document: ", e);
+        throw new Error("Could not delete document");
     }
 };

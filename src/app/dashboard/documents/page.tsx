@@ -1,7 +1,7 @@
 // src/app/dashboard/documents/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -12,7 +12,8 @@ import {
   Crown,
   Lock,
   FileText,
-  Video
+  Video,
+  Loader
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,30 +26,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-// Mock data, to be replaced with Firebase data
-const mockDocuments = [
-  { id: '1', title: 'Annales Corrigées - ENA 2023', type: 'pdf', access_type: 'premium', category: 'Annales' },
-  { id: '2', title: 'Résumé de la Constitution', type: 'pdf', access_type: 'gratuit', category: 'Droit' },
-  { id: '3', title: 'Fiche de révision : Histoire Géo', type: 'pdf', access_type: 'gratuit', category: 'Histoire' },
-  { id: '4', title: 'Guide des Tests Psychotechniques', type: 'pdf', access_type: 'premium', category: 'Psychotechnique' },
-  { id: '5', title: 'Leçons de Culture Générale', type: 'pdf', access_type: 'gratuit', category: 'Culture Générale' },
-  { id: '6', title: 'Vidéo : Méthodologie de la dissertation', type: 'video', access_type: 'premium', category: 'Méthodologie' },
-];
+import { useToast } from '@/hooks/use-toast';
+import { LibraryDocument, getDocumentsFromFirestore } from '@/lib/firestore.service';
 
 export default function DocumentsPage() {
   const { userData } = useAuth();
+  const { toast } = useToast();
+
+  const [documents, setDocuments] = useState<LibraryDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     category: 'all',
     type: 'all',
   });
 
+   useEffect(() => {
+    const fetchDocuments = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedDocs = await getDocumentsFromFirestore();
+        setDocuments(fetchedDocs);
+      } catch (error) {
+         toast({
+          variant: 'destructive',
+          title: 'Erreur',
+          description: 'Impossible de charger les documents de la bibliothèque.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDocuments();
+  }, [toast]);
+
   const handleFilterChange = (type: string, value: string) => {
     setFilters(prev => ({ ...prev, [type]: value }));
   };
 
-  const filteredDocuments = mockDocuments.filter(doc => {
+  const filteredDocuments = documents.filter(doc => {
     return (
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (filters.category === 'all' || doc.category === filters.category) &&
@@ -58,7 +74,7 @@ export default function DocumentsPage() {
   
   const isPremium = userData?.subscription_type === 'premium';
   
-  const categories = ['all', ...Array.from(new Set(mockDocuments.map(d => d.category)))];
+  const categories = ['all', ...Array.from(new Set(documents.map(d => d.category)))];
   const types = ['all', 'pdf', 'video'];
 
   return (
@@ -110,73 +126,81 @@ export default function DocumentsPage() {
           </Select>
         </div>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredDocuments.map(doc => {
-          const isLocked = doc.access_type === 'premium' && !isPremium;
-          const Icon = doc.type === 'pdf' ? FileText : Video;
-          
-          return (
-            <Card key={doc.id} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0 flex flex-col">
-              <CardContent className="p-5 flex-grow">
-                <div className="flex justify-between items-start mb-4">
-                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-md ${
-                    doc.type === 'pdf' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
-                    'bg-gradient-to-r from-blue-500 to-cyan-500'
-                   }`}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  {doc.access_type === 'premium' && (
-                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Premium
-                    </Badge>
-                  )}
-                </div>
-                <h3 className="text-base font-bold text-gray-900 group-hover:text-purple-600 transition-colors mb-2">
-                  {doc.title}
-                </h3>
-                <Badge variant="outline" className="text-xs font-semibold capitalize">
-                  {doc.category}
-                </Badge>
-              </CardContent>
-              <div className="p-3 bg-white/20">
-                <Button 
-                  className={`w-full font-bold text-white rounded-lg h-10 text-sm ${
-                    isLocked 
-                      ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
-                  }`}
-                  disabled={isLocked}
-                  asChild
-                >
-                  <Link href={isLocked ? '#' : `/dashboard/documents/${doc.id}`}>
-                    {isLocked ? (
-                      <>
-                        <Lock className="w-4 h-4 mr-2" />
-                        Premium
-                      </>
-                    ) : (
-                      <>
-                        {doc.type === 'pdf' ? 'Consulter' : 'Visionner'}
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-      {filteredDocuments.length === 0 && (
-        <div className="text-center py-10 col-span-full">
-            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="w-10 h-10 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-600 mb-1">Aucune ressource trouvée</h3>
-            <p className="text-gray-500 text-sm">Essayez de modifier vos filtres.</p>
+      
+      {isLoading ? (
+         <div className="flex justify-center items-center h-64">
+            <Loader className="w-10 h-10 animate-spin text-purple-500"/>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredDocuments.map(doc => {
+              const isLocked = doc.access_type === 'premium' && !isPremium;
+              const Icon = doc.type === 'pdf' ? FileText : Video;
+              
+              return (
+                <Card key={doc.id} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0 flex flex-col">
+                  <CardContent className="p-5 flex-grow">
+                    <div className="flex justify-between items-start mb-4">
+                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-md ${
+                        doc.type === 'pdf' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
+                        'bg-gradient-to-r from-blue-500 to-cyan-500'
+                       }`}>
+                        <Icon className="w-5 h-5 text-white" />
+                      </div>
+                      {doc.access_type === 'premium' && (
+                        <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
+                          <Crown className="w-3 h-3 mr-1" />
+                          Premium
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="text-base font-bold text-gray-900 group-hover:text-purple-600 transition-colors mb-2">
+                      {doc.title}
+                    </h3>
+                    <Badge variant="outline" className="text-xs font-semibold capitalize">
+                      {doc.category}
+                    </Badge>
+                  </CardContent>
+                  <div className="p-3 bg-white/20">
+                    <Button 
+                      className={`w-full font-bold text-white rounded-lg h-10 text-sm ${
+                        isLocked 
+                          ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
+                      }`}
+                      disabled={isLocked}
+                      asChild
+                    >
+                      <Link href={isLocked ? '#' : doc.url} target="_blank" rel="noopener noreferrer">
+                        {isLocked ? (
+                          <>
+                            <Lock className="w-4 h-4 mr-2" />
+                            Premium
+                          </>
+                        ) : (
+                          <>
+                            {doc.type === 'pdf' ? 'Consulter' : 'Visionner'}
+                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </>
+                        )}
+                      </Link>
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+          {filteredDocuments.length === 0 && (
+            <div className="text-center py-10 col-span-full">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-600 mb-1">Aucune ressource trouvée</h3>
+                <p className="text-gray-500 text-sm">Essayez de modifier vos filtres ou revenez plus tard.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

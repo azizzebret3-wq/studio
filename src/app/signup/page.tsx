@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
+import { doc, setDoc, getDocs, collection, query, limit } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,6 +55,21 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Check if this is the first user
+      const usersCollectionRef = collection(db, "users");
+      const q = query(usersCollectionRef, limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      let userRole = 'user';
+      if (querySnapshot.empty) {
+        // No users exist, this is the first one, make them admin.
+        userRole = 'admin';
+        toast({
+            title: "Super-utilisateur activé !",
+            description: "Le premier compte a été créé avec les droits d'administrateur.",
+        });
+      }
+
       // Add user to Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
@@ -63,7 +78,7 @@ export default function SignupPage() {
         phone,
         competitionType,
         createdAt: new Date(),
-        role: 'user', // Default role
+        role: userRole,
         subscription_type: 'gratuit', // Default subscription
       });
       

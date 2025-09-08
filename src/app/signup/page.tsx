@@ -54,6 +54,10 @@ export default function SignupPage() {
                 />
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="phone">Numéro de téléphone</Label>
+                <Input id="phone" type="tel" placeholder="+226 XX XX XX XX" required />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="competition-type">Type de concours</Label>
                 <Select required>
                   <SelectTrigger id="competition-type">

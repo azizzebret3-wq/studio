@@ -24,6 +24,7 @@ import {
   X,
   Bell,
   Search,
+  BrainCircuit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,6 +53,7 @@ const adminNavItems = [
   { title: "Gérer Quiz", url: "/dashboard/admin/quizzes", icon: Play, gradient: "from-teal-500 to-cyan-500" },
   { title: "Gérer Contenu", url: "/dashboard/admin/content", icon: FileText, gradient: "from-rose-500 to-pink-500" },
   { title: "Gérer Users", url: "/dashboard/admin/users", icon: Users, gradient: "from-amber-500 to-orange-500" },
+  { title: "Générateur IA", url: "/dashboard/admin/generate-quiz", icon: BrainCircuit, gradient: "from-indigo-500 to-purple-500" },
 ];
 
 export default function DashboardLayout({

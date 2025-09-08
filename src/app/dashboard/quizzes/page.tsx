@@ -141,7 +141,7 @@ export default function QuizzesPage() {
                 Tous les Quiz
               </h1>
               <p className="text-sm sm:text-base text-gray-600 font-medium">
-                Mettez-vous au défi ou générez un quiz avec l'IA.
+                Mettez-vous au défi ou générez un quiz sur-mesure.
               </p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function QuizzesPage() {
                 <BrainCircuit className="w-5 h-5 text-white" />
             </div>
             <div>
-                <CardTitle className="text-xl font-bold text-foreground">Générateur de Quiz IA</CardTitle>
+                <CardTitle className="text-xl font-bold text-foreground">Générateur de Quiz Intelligent</CardTitle>
                 <CardDescription className="text-sm">Créez des quiz sur-mesure en quelques secondes.</CardDescription>
             </div>
           </div>
@@ -204,7 +204,7 @@ export default function QuizzesPage() {
               <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 cursor-pointer transition-colors">
                 <div className="text-center md:text-left">
                   <h3 className="font-bold text-yellow-800 dark:text-yellow-300">Accès Premium requis</h3>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-400">Le générateur de quiz par IA est une fonctionnalité exclusive.</p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400">Le générateur de quiz intelligent est une fonctionnalité exclusive.</p>
                 </div>
                 <Button size="sm" className="mt-4 md:mt-0 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg">
                   <Sparkles className="w-4 h-4 mr-2" />

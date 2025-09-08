@@ -71,7 +71,7 @@ export default function AdminQuizzesPage() {
       setManualQuizCategory(topic); // Pre-fill category
       toast({
         title: 'Quiz généré !',
-        description: 'Votre quiz a été créé avec succès par l\'IA pour validation.',
+        description: 'Votre quiz a été créé avec succès pour validation.',
       });
     } catch (error) {
       console.error('Error generating quiz:', error);
@@ -227,7 +227,7 @@ export default function AdminQuizzesPage() {
                 Gestion des Quiz
               </h1>
               <p className="text-sm sm:text-base text-gray-600 font-medium">
-                Générez avec l'IA ou créez manuellement des quiz.
+                Générez automatiquement ou créez manuellement des quiz.
               </p>
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function AdminQuizzesPage() {
       
       <Tabs defaultValue="ai_generator">
         <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai_generator"><Wand2 className="mr-2 h-4 w-4" />Générer avec l'IA</TabsTrigger>
+            <TabsTrigger value="ai_generator"><Wand2 className="mr-2 h-4 w-4" />Génération Automatique</TabsTrigger>
             <TabsTrigger value="manual_creator"><PlusCircle className="mr-2 h-4 w-4" />Ajouter Manuellement</TabsTrigger>
         </TabsList>
         <TabsContent value="ai_generator">
@@ -244,7 +244,7 @@ export default function AdminQuizzesPage() {
                 <div className="lg:col-span-1">
                     <Card className="glassmorphism shadow-xl sticky top-24">
                         <CardHeader>
-                            <CardTitle>Paramètres IA</CardTitle>
+                            <CardTitle>Paramètres de Génération</CardTitle>
                             <CardDescription>Définissez les options pour générer votre quiz.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -294,14 +294,14 @@ export default function AdminQuizzesPage() {
                     <Card className="glassmorphism shadow-xl min-h-[60vh]">
                         <CardHeader>
                             <CardTitle>Résultat</CardTitle>
-                            <CardDescription>Le quiz généré par l'IA apparaîtra ici pour validation.</CardDescription>
+                            <CardDescription>Le quiz généré apparaîtra ici pour validation.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoading && (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
                                     <BrainCircuit className="w-16 h-16 text-purple-400 animate-pulse" />
-                                    <p className="mt-4 text-lg font-semibold text-gray-600">L'IA est en pleine réflexion...</p>
-                                    <p className="text-sm text-gray-500">Création des questions en cours.</p>
+                                    <p className="mt-4 text-lg font-semibold text-gray-600">Analyse et création en cours...</p>
+                                    <p className="text-sm text-gray-500">Génération des questions.</p>
                                 </div>
                             )}
                             {generatedQuiz?.quiz && (

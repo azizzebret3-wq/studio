@@ -8,10 +8,10 @@ import { Crown, Sparkles, CheckCircle, Rocket, BrainCircuit, BookOpen, Video } f
 import Link from 'next/link';
 
 const premiumFeatures = [
-    { icon: BrainCircuit, text: "Génération de quiz illimitée par l'IA" },
+    { icon: BrainCircuit, text: "Génération de quiz intelligente et illimitée" },
     { icon: BookOpen, text: 'Accès à toute la bibliothèque de documents' },
     { icon: Video, text: 'Accès à toutes les formations vidéo' },
-    { icon: Sparkles, text: 'Corrections détaillées par l\'IA' },
+    { icon: Sparkles, text: 'Corrections intelligentes et détaillées' },
     { icon: CheckCircle, text: 'Suivi de performance avancé' },
     { icon: CheckCircle, text: 'Support prioritaire' },
 ];

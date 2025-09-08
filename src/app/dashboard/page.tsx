@@ -237,7 +237,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <CardTitle className="text-xl font-bold text-foreground">Quiz Recommandés</CardTitle>
-                  <p className="text-muted-foreground font-medium text-sm">Sélectionnés par notre IA</p>
+                  <p className="text-muted-foreground font-medium text-sm">Sélectionnés pour vous</p>
                 </div>
               </div>
             </CardHeader>

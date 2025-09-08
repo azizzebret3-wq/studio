@@ -17,6 +17,7 @@ import { BrainCircuit, Loader, Wand2, Copy, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { saveQuizToFirestore } from '@/lib/firestore.service';
 
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
@@ -25,6 +26,7 @@ export default function AdminQuizzesPage() {
   const [competitionType, setCompetitionType] = useState('');
   const [numberOfQuestions, setNumberOfQuestions] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
@@ -46,7 +48,7 @@ export default function AdminQuizzesPage() {
       setGeneratedQuiz(result);
       toast({
         title: 'Quiz généré !',
-        description: 'Votre quiz a été créé avec succès par l\'IA.',
+        description: 'Votre quiz a été créé avec succès par l\'IA pour validation.',
       });
     } catch (error) {
       console.error('Error generating quiz:', error);
@@ -60,12 +62,37 @@ export default function AdminQuizzesPage() {
     }
   };
   
-  const handleSaveQuiz = () => {
-    // Logic to save the quiz to Firestore
-    toast({
-        title: 'Fonctionnalité à venir',
-        description: 'La sauvegarde des quiz sera bientôt disponible.',
-    });
+  const handleSaveQuiz = async () => {
+    if (!generatedQuiz) return;
+    setIsSaving(true);
+    try {
+      // Here you could add a dialog to edit quiz details before saving
+      const quizDataToSave = {
+        ...generatedQuiz.quiz,
+        category: topic, // Using topic as category for now
+        difficulty: 'moyen', // Default difficulty
+        access_type: 'gratuit', // Default access type
+        duration_minutes: numberOfQuestions * 1, // 1 minute per question
+        total_questions: generatedQuiz.quiz.questions.length,
+        createdAt: new Date(),
+      };
+      
+      await saveQuizToFirestore(quizDataToSave);
+
+      toast({
+          title: 'Quiz Sauvegardé !',
+          description: 'Le quiz est maintenant disponible pour les utilisateurs.',
+      });
+    } catch (error) {
+      console.error("Error saving quiz: ", error);
+      toast({
+          variant: 'destructive',
+          title: 'Erreur de sauvegarde',
+          description: 'Le quiz n\'a pas pu être sauvegardé.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const copyToClipboard = (text: string) => {
@@ -106,18 +133,18 @@ export default function AdminQuizzesPage() {
                 <CardContent>
                     <form onSubmit={handleGenerateQuiz} className="space-y-4">
                         <div className="space-y-1.5">
-                            <Label htmlFor="topic">Sujet</Label>
+                            <Label htmlFor="topic">Sujet / Catégorie</Label>
                             <Input
                                 id="topic"
                                 placeholder="Ex: Histoire du Burkina Faso"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
-                                disabled={isLoading}
+                                disabled={isLoading || isSaving}
                             />
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="competitionType">Type de concours</Label>
-                            <Select onValueChange={setCompetitionType} value={competitionType} disabled={isLoading}>
+                            <Select onValueChange={setCompetitionType} value={competitionType} disabled={isLoading || isSaving}>
                                 <SelectTrigger id="competitionType">
                                 <SelectValue placeholder="Sélectionner un type" />
                                 </SelectTrigger>
@@ -136,10 +163,10 @@ export default function AdminQuizzesPage() {
                                 onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10))}
                                 min="1"
                                 max="50"
-                                disabled={isLoading}
+                                disabled={isLoading || isSaving}
                             />
                         </div>
-                        <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading}>
+                        <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving}>
                             {isLoading ? (
                                 <>
                                 <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -208,8 +235,18 @@ export default function AdminQuizzesPage() {
                             </Accordion>
 
                              <div className="flex gap-4">
-                               <Button onClick={handleSaveQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold">
-                                  <Save className="mr-2 h-4 w-4" /> Enregistrer ce quiz
+                               <Button onClick={handleSaveQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSaving}>
+                                  {isSaving ? (
+                                    <>
+                                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                      Sauvegarde...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="mr-2 h-4 w-4" /> 
+                                      Enregistrer ce quiz
+                                    </>
+                                  )}
                                </Button>
                                <Button onClick={() => copyToClipboard(JSON.stringify(generatedQuiz.quiz, null, 2))} variant="outline" className="w-full">
                                   <Copy className="mr-2 h-4 w-4" /> Copier le JSON du quiz
@@ -220,8 +257,7 @@ export default function AdminQuizzesPage() {
                      {!isLoading && !generatedQuiz && (
                         <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
                             <Wand2 className="w-16 h-16 text-gray-300" />
-                            <p className="mt-4 text-lg font-semibold text-gray-600">En attente de génération</p>
-                            <p className="text-sm text-gray-500">Utilisez le formulaire pour créer un nouveau quiz.</p>
+                            <p className="mt-4 text-lg font-semibold text-gray-600">En attente de génération</p>                            <p className="text-sm text-gray-500">Utilisez le formulaire pour créer un nouveau quiz.</p>
                         </div>
                     )}
                 </CardContent>

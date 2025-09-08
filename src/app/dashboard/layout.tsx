@@ -24,6 +24,7 @@ import {
   BrainCircuit,
   Moon,
   Sun,
+  Wand2,
 } from 'lucide-react';
 import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import { Logo } from '@/components/logo';
 const userNavItems = [
   { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
+  { title: "Générateur IA", url: "/dashboard/generate-quiz", icon: Wand2, gradient: "from-indigo-500 to-purple-500" },
   { title: "Bibliothèque", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy, gradient: "from-rose-500 to-pink-500" },
 ];
@@ -44,7 +46,6 @@ const adminNavItems = [
   { title: "Gérer Quiz", url: "/dashboard/admin/quizzes", icon: Play, gradient: "from-teal-500 to-cyan-500" },
   { title: "Gérer Contenu", url: "/dashboard/admin/content", icon: FileText, gradient: "from-rose-500 to-pink-500" },
   { title: "Gérer Users", url: "/dashboard/admin/users", icon: Users, gradient: "from-amber-500 to-orange-500" },
-  { title: "Générateur IA", url: "/dashboard/admin/generate-quiz", icon: BrainCircuit, gradient: "from-indigo-500 to-purple-500" },
 ];
 
 export default function DashboardLayout({
@@ -112,6 +113,8 @@ export default function DashboardLayout({
 
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
+  const navItems = isAdmin ? [...userNavItems.slice(0, 2), ...adminNavItems] : userNavItems;
+  const mobileUserNav = isAdmin ? userNavItems.filter(item => item.url !== '/dashboard/generate-quiz') : userNavItems;
 
   return (
      <div className="min-h-screen bg-background">
@@ -202,25 +205,7 @@ export default function DashboardLayout({
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1">
-                {userNavItems.map((item) => (
-                  <Link key={item.title} href={item.url}>
-                    <Button
-                      variant="ghost"
-                      className={`nav-glow rounded-xl px-4 py-2 font-semibold text-sm transition-all ${
-                        pathname === item.url
-                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
-                          : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4 mr-2" />
-                      {item.title}
-                    </Button>
-                  </Link>
-                ))}
-                
-                {isAdmin && <div className="w-px h-6 bg-border mx-2"></div>}
-                
-                {isAdmin && adminNavItems.map((item) => (
+                {navItems.map((item) => (
                   <Link key={item.title} href={item.url}>
                     <Button
                       variant="ghost"
@@ -331,7 +316,7 @@ export default function DashboardLayout({
                   <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />Navigation
                   </h3>
-                  {userNavItems.map((item) => (
+                  {mobileUserNav.map((item) => (
                     <Link key={item.title} href={item.url}>
                       <Button
                         variant="ghost"
@@ -412,13 +397,13 @@ export default function DashboardLayout({
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
-             <div className="grid grid-cols-4 gap-1 p-2">
-                 {[...userNavItems].slice(0,4).map((item) => (
+             <div className="grid grid-cols-5 gap-1 p-2">
+                 {userNavItems.map((item) => (
                      <Link key={item.title} href={item.url}>
                          <Button
                              variant="ghost"
                              className={`flex flex-col gap-1 h-auto py-2 px-1 rounded-xl font-medium text-xs transition-all w-full ${
-                                 pathname === item.url
+                                 pathname.startsWith(item.url)
                                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
                                      : 'text-muted-foreground hover:bg-white/60'
                              }`}

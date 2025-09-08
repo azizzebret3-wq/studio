@@ -27,7 +27,8 @@ const GenerateQuizOutputSchema = z.object({
       z.object({
         question: z.string().describe('The text of the question.'),
         options: z.array(z.string()).describe('The possible answer options.'),
-        correctAnswer: z.string().describe('The correct answer to the question.'),
+        correctAnswers: z.array(z.string()).describe('The list of correct answers to the question. Can be one or more.'),
+        explanation: z.string().optional().describe('An optional explanation for the correct answer(s).'),
       })
     ).describe('The questions in the quiz, with options and correct answers.'),
   }).describe('The generated quiz.'),
@@ -49,9 +50,13 @@ The quiz should be on the following topic: {{{topic}}}.
 The quiz should have the following number of questions: {{{numberOfQuestions}}}.
 
 The quiz should have a title and a description.
-Each question should have a question, an array of options, and a correct answer.
-Make sure that the correct answer is always included in the options.
+Each question should have:
+- The question text.
+- An array of options.
+- An array of one or more correct answers.
+- An optional, brief explanation for the correct answer(s).
 
+Make sure that all correct answers are always included in the options array.
 Ensure that the quiz is tailored to the specified competition type and topic.
 `, 
 });

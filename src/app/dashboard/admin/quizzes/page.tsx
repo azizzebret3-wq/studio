@@ -2,7 +2,8 @@
 'use client';
 
 import React from 'react';
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, PlusCircle } from "lucide-react";
+import { Button } from '@/components/ui/button';
 
 export default function AdminQuizzesPage() {
   // Add logic to fetch and manage quizzes
@@ -24,6 +25,10 @@ export default function AdminQuizzesPage() {
             </div>
           </div>
         </div>
+        <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold shadow-lg">
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Ajouter un Quiz
+        </Button>
       </div>
        <div className="flex flex-col items-center justify-center h-[50vh] text-center p-4 bg-white/50 rounded-2xl shadow-inner">
         <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
@@ -31,7 +36,7 @@ export default function AdminQuizzesPage() {
         </div>
         <h2 className="text-2xl font-bold text-gray-800">Bientôt disponible</h2>
         <p className="mt-2 text-base text-gray-600 max-w-md mx-auto">
-          La gestion des quiz sera bientôt implémentée ici.
+          La gestion des quiz sera bientôt implémentée ici. Vous pourrez ajouter et voir les quiz existants.
         </p>
       </div>
     </div>

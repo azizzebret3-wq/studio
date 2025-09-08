@@ -1,8 +1,7 @@
-
-// src/app/dashboard/admin/generate-quiz/page.tsx
+// src/app/dashboard/generate-quiz/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -16,10 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Loader, Wand2, Copy } from 'lucide-react';
+import { BrainCircuit, Loader, Wand2, Copy, Crown, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
+// Store generated quiz in memory (a more robust solution would use state management like Zustand or Redux)
+let quizStore: GenerateQuizOutput | null = null;
 
 
 export default function GenerateQuizPage() {
@@ -33,11 +35,7 @@ export default function GenerateQuizPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && userData?.role !== 'admin') {
-      router.push('/dashboard');
-    }
-  }, [userData, authLoading, router]);
+  const canGenerate = userData?.role === 'admin' || userData?.subscription_type === 'premium';
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +54,7 @@ export default function GenerateQuizPage() {
     try {
       const result = await generateQuiz({ topic, competitionType, numberOfQuestions });
       setGeneratedQuiz(result);
+      quizStore = result; // Store the quiz
       toast({
         title: 'Quiz généré !',
         description: 'Votre quiz a été créé avec succès par l\'IA.',
@@ -80,12 +79,38 @@ export default function GenerateQuizPage() {
     });
   };
 
-  if (authLoading || !userData || userData.role !== 'admin') {
+  const startGeneratedQuiz = () => {
+    if (generatedQuiz) {
+      router.push('/dashboard/take-quiz?source=generated');
+    }
+  };
+
+  if (authLoading || !userData) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-purple-500"></div>
       </div>
     );
+  }
+
+  if (!canGenerate) {
+    return (
+       <div className="p-4 sm:p-6 md:p-8 space-y-6">
+        <div className="flex flex-col items-center justify-center h-[70vh] text-center p-6 bg-white/50 dark:bg-black/20 rounded-2xl shadow-inner">
+          <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mb-6 shadow-lg">
+            <Crown className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Fonctionnalité Premium</h2>
+          <p className="mt-3 text-base text-gray-600 dark:text-gray-300 max-w-lg mx-auto">
+            Le générateur de quiz par IA est réservé à nos membres Premium. Passez au niveau supérieur pour créer des quiz illimités et sur-mesure !
+          </p>
+           <Button size="lg" className="mt-8 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Devenir Premium
+            </Button>
+        </div>
+      </div>
+    )
   }
 
 
@@ -183,14 +208,14 @@ export default function GenerateQuizPage() {
                     )}
                     {generatedQuiz?.quiz && (
                         <div className="space-y-6">
-                            <div className="p-4 border rounded-lg bg-white/50">
+                            <div className="p-4 border rounded-lg bg-white/50 dark:bg-black/20">
                                 <h2 className="text-xl font-bold">{generatedQuiz.quiz.title}</h2>
-                                <p className="text-sm text-gray-600">{generatedQuiz.quiz.description}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{generatedQuiz.quiz.description}</p>
                             </div>
                             <Accordion type="single" collapsible className="w-full">
                                 {generatedQuiz.quiz.questions.map((q, index) => (
                                 <AccordionItem value={`item-${index}`} key={index}>
-                                    <AccordionTrigger className="font-semibold text-left">
+                                    <AccordionTrigger className="font-semibold text-left hover:no-underline">
                                         Question {index + 1}: {q.question}
                                     </AccordionTrigger>
                                     <AccordionContent>
@@ -199,23 +224,33 @@ export default function GenerateQuizPage() {
                                             <p
                                                 key={i}
                                                 className={`p-2 rounded-md text-sm ${
-                                                opt === q.correctAnswer
-                                                    ? 'bg-green-100 text-green-800 font-bold'
-                                                    : 'bg-gray-100'
+                                                q.correctAnswers.includes(opt)
+                                                    ? 'bg-green-100 dark:bg-green-800/30 text-green-800 dark:text-green-300 font-bold'
+                                                    : 'bg-gray-100 dark:bg-gray-800/50'
                                                 }`}
                                             >
                                                 {opt}
                                             </p>
                                             ))}
+                                            {q.explanation && (
+                                                <div className="mt-2 p-2 text-xs rounded-lg bg-blue-50 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
+                                                    <strong>Explication :</strong> {q.explanation}
+                                                </div>
+                                            )}
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
                                 ))}
                             </Accordion>
 
-                             <Button onClick={() => copyToClipboard(JSON.stringify(generatedQuiz.quiz, null, 2))} variant="outline" className="w-full">
-                                <Copy className="mr-2 h-4 w-4" /> Copier le JSON du quiz
-                            </Button>
+                             <div className="flex gap-4">
+                               <Button onClick={startGeneratedQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold">
+                                  <Wand2 className="mr-2 h-4 w-4" /> Commencer ce quiz
+                               </Button>
+                               <Button onClick={() => copyToClipboard(JSON.stringify(generatedQuiz.quiz, null, 2))} variant="outline" className="w-full">
+                                  <Copy className="mr-2 h-4 w-4" /> Copier le JSON du quiz
+                               </Button>
+                            </div>
                         </div>
                     )}
                      {!isLoading && !generatedQuiz && (
@@ -231,4 +266,9 @@ export default function GenerateQuizPage() {
       </div>
     </div>
   );
+}
+
+// Function to retrieve the stored quiz
+export function getGeneratedQuiz() {
+  return quizStore;
 }

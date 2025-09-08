@@ -50,13 +50,6 @@ export default function AdminDashboardPage() {
           icon: FileText,
           color: "from-rose-500 to-pink-500"
       },
-      {
-          title: "Générateur de Quiz IA",
-          description: "Créer des quiz automatiquement avec l'IA.",
-          href: "/dashboard/admin/generate-quiz",
-          icon: BrainCircuit,
-          color: "from-indigo-500 to-purple-500"
-      }
   ]
 
   return (

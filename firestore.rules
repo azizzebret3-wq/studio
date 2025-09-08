@@ -1,11 +1,9 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and update their own user document
+    // Les utilisateurs peuvent lire, créer et mettre à jour leur propre document
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      allow read, create, update: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

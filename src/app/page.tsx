@@ -83,25 +83,25 @@ export default function Home() {
 
   const testimonials = [
     {
-      name: "Étudiante admise",
-      role: "Concours direct ENS",
+      name: "Adel, admis à 4 concours",
+      role: "Lauréat de la fonction publique",
       text: "Grâce aux quiz interactifs et au suivi personnalisé, j'ai pu identifier mes lacunes et m'améliorer rapidement. Les animations rendent l'apprentissage amusant !",
       rating: 5,
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60&h=60&fit=crop&q=80&facepad=2"
+      avatar: "https://picsum.photos/60/60?random=1"
     },
     {
-      name: "Candidat en reconversion",
-      role: "Concours professionnel Fonction Publique",
+      name: "Fatima, candidate",
+      role: "Concours professionnel",
       text: "La qualité des contenus et l'interface moderne ont transformé ma préparation en expérience immersive. Les formations vidéo sont exceptionnelles !",
       rating: 5,
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&q=80&facepad=2"
+      avatar: "https://picsum.photos/60/60?random=2"
     },
     {
-      name: "Nouvelle candidate",
-      role: "Concours direct INPHB",
+      name: "Moussa, étudiant",
+      role: "Concours direct",
       text: "Le système de badges et de progression m'a motivée tout au long de ma préparation. J'ai gagné 40 points en moyenne !",
       rating: 5,
-      avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=60&h=60&fit=crop&q=80&facepad=2"
+      avatar: "https://picsum.photos/60/60?random=3"
     }
   ];
 
@@ -424,6 +424,7 @@ export default function Home() {
                     <img 
                       src={testimonial.avatar} 
                       alt={testimonial.name}
+                      data-ai-hint="person"
                       className="w-16 h-16 rounded-full object-cover ring-4 ring-purple-100 shadow-lg"
                     />
                     <div className="text-left">

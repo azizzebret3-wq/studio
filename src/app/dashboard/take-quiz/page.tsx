@@ -42,49 +42,9 @@ export default function TakeQuizPage() {
   const quizId = searchParams.get('id');
   const source = searchParams.get('source');
 
-  const loadQuiz = useCallback(async () => {
-    setLoading(true);
-    
-    if (source === 'generated') {
-      const quizData = sessionStorage.getItem('generatedQuiz');
-      if (quizData) {
-        const parsedData: GenerateQuizOutput = JSON.parse(quizData);
-        const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
-        setQuiz(activeQuiz);
-        setUserAnswers(Array(activeQuiz.questions.length).fill([]));
-        setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
-      } else {
-        toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
-        router.push('/dashboard/quizzes');
-      }
-    } else if (quizId) {
-      try {
-        const allQuizzes = await getQuizzesFromFirestore();
-        const foundQuiz = allQuizzes.find(q => q.id === quizId);
-        if (foundQuiz) {
-          setQuiz(foundQuiz);
-          setUserAnswers(Array(foundQuiz.questions.length).fill([]));
-          setTimeLeft(foundQuiz.duration_minutes * 60);
-        } else {
-          toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
-          router.push('/dashboard/quizzes');
-        }
-      } catch (error) {
-        toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
-        router.push('/dashboard/quizzes');
-      }
-    } else {
-      router.push('/dashboard/quizzes');
-    }
-    setLoading(false);
-  }, [quizId, source, router, toast]);
-
-  useEffect(() => {
-    loadQuiz();
-  }, [loadQuiz]);
   
   const handleFinishQuiz = useCallback(async () => {
-    if (!quiz || !user) return;
+    if (!quiz || !user || quizFinished) return; // Prevent multiple submissions
 
     if (source === 'generated') {
       sessionStorage.removeItem('generatedQuiz');
@@ -128,8 +88,49 @@ export default function TakeQuizPage() {
         console.error("Failed to save attempt", error);
         toast({ title: 'Erreur', description: "Impossible d'enregistrer vos résultats.", variant: 'destructive' });
     }
-  }, [quiz, user, source, userAnswers, toast]);
+  }, [quiz, user, source, userAnswers, toast, quizFinished]);
 
+  const loadQuiz = useCallback(async () => {
+    setLoading(true);
+    
+    if (source === 'generated') {
+      const quizData = sessionStorage.getItem('generatedQuiz');
+      if (quizData) {
+        const parsedData: GenerateQuizOutput = JSON.parse(quizData);
+        const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
+        setQuiz(activeQuiz);
+        setUserAnswers(Array(activeQuiz.questions.length).fill([]));
+        setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
+      } else {
+        toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
+        router.push('/dashboard/quizzes');
+      }
+    } else if (quizId) {
+      try {
+        const allQuizzes = await getQuizzesFromFirestore();
+        const foundQuiz = allQuizzes.find(q => q.id === quizId);
+        if (foundQuiz) {
+          setQuiz(foundQuiz);
+          setUserAnswers(Array(foundQuiz.questions.length).fill([]));
+          setTimeLeft(foundQuiz.duration_minutes * 60);
+        } else {
+          toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
+          router.push('/dashboard/quizzes');
+        }
+      } catch (error) {
+        toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
+        router.push('/dashboard/quizzes');
+      }
+    } else {
+      router.push('/dashboard/quizzes');
+    }
+    setLoading(false);
+  }, [quizId, source, router, toast]);
+
+  useEffect(() => {
+    loadQuiz();
+  }, [loadQuiz]);
+  
   useEffect(() => {
     if (quiz && !quizFinished && timeLeft > 0) {
       const timer = setInterval(() => {
@@ -137,9 +138,13 @@ export default function TakeQuizPage() {
       }, 1000);
       return () => clearInterval(timer);
     } else if (timeLeft === 0 && !quizFinished) {
+      toast({
+        title: "Temps écoulé !",
+        description: "Le quiz est terminé. Vos résultats sont en cours de calcul.",
+      });
       handleFinishQuiz();
     }
-  }, [quiz, quizFinished, timeLeft, handleFinishQuiz]);
+  }, [quiz, quizFinished, timeLeft, handleFinishQuiz, toast]);
 
 
   const handleNextQuestion = () => {

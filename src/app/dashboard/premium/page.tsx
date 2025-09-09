@@ -1,11 +1,15 @@
 // src/app/dashboard/premium/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Crown, Sparkles, CheckCircle, Rocket, BrainCircuit, BookOpen, Video } from 'lucide-react';
-import Link from 'next/link';
+import { Crown, Sparkles, CheckCircle, Rocket, BrainCircuit, BookOpen, Video, Loader } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { updateUserSubscriptionInFirestore } from '@/lib/firestore.service';
+import { useRouter } from 'next/navigation';
+
 
 const premiumFeatures = [
     { icon: BrainCircuit, text: "Génération de quiz intelligente et illimitée" },
@@ -34,6 +38,36 @@ const MoovMoneyLogo = () => (
 
 
 export default function PremiumPage() {
+  const { user, userData, reloadUserData } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const handleUpgrade = async () => {
+    if (!user) {
+        toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
+        return;
+    }
+
+    setIsUpgrading(true);
+
+    try {
+        await updateUserSubscriptionInFirestore(user.uid, 'premium');
+        await reloadUserData();
+        toast({
+            title: "Félicitations ! 🎉",
+            description: "Vous êtes maintenant un membre Premium.",
+        });
+        router.push('/dashboard');
+    } catch (error) {
+        console.error("Error upgrading to premium:", error);
+        toast({ title: "Erreur", description: "La mise à niveau a échoué. Veuillez réessayer.", variant: "destructive" });
+    } finally {
+        setIsUpgrading(false);
+    }
+  };
+
+
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -76,9 +110,12 @@ export default function PremiumPage() {
                         </div>
                     ))}
                 </div>
-                <Button className="w-full h-12 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white shadow-lg">
-                    <Rocket className="w-5 h-5 mr-3" />
-                    Je deviens Premium
+                <Button 
+                  onClick={handleUpgrade}
+                  disabled={isUpgrading || userData?.subscription_type === 'premium'}
+                  className="w-full h-12 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white shadow-lg"
+                >
+                    {isUpgrading ? <><Loader className="w-5 h-5 mr-3 animate-spin"/> Mise à niveau...</> : (userData?.subscription_type === 'premium' ? 'Vous êtes déjà Premium' : <><Rocket className="w-5 h-5 mr-3" />Je deviens Premium</>)}
                 </Button>
                  <div className="text-center mt-6">
                     <p className="text-sm font-medium text-muted-foreground mb-3">Paiement sécurisé via Mobile Money :</p>

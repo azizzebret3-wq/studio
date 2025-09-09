@@ -135,6 +135,16 @@ export const updateUserRoleInFirestore = async (uid: string, role: 'admin' | 'us
     }
 };
 
+export const updateUserSubscriptionInFirestore = async (uid: string, subscription_type: 'premium' | 'gratuit') => {
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        await updateDoc(userDocRef, { subscription_type });
+    } catch (e) {
+        console.error("Error updating user subscription: ", e);
+        throw new Error("Could not update user subscription");
+    }
+}
+
 export const saveAttemptToFirestore = async (attemptData: Omit<Attempt, 'id'>) => {
     try {
         const docRef = await addDoc(collection(db, "attempts"), attemptData);

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
@@ -30,8 +30,12 @@ import { Switch } from '@/components/ui/switch';
 
 const manualQuestionSchema = z.object({
   question: z.string().min(1, 'La question ne peut pas être vide.'),
-  options: z.array(z.object({ text: z.string().min(1, "L'option ne peut pas être vide.") })).min(2, 'Au moins deux options sont requises.'),
-  correctAnswers: z.array(z.string()).min(1, 'Au moins une bonne réponse est requise.'),
+  options: z.array(
+    z.object({ 
+      text: z.string().min(1, "L'option ne peut pas être vide."),
+      isCorrect: z.boolean().default(false),
+    })
+  ).min(2, 'Au moins deux options sont requises.'),
   explanation: z.string().optional(),
 });
 
@@ -39,12 +43,18 @@ const manualQuizSchema = z.object({
   title: z.string().min(1, 'Le titre est requis.'),
   description: z.string().min(1, 'La description est requise.'),
   category: z.string().min(1, 'La catégorie est requise.'),
-  duration: z.coerce.number().min(1, 'La durée doit être d\'au moins 1 minute.'),
+  duration: z.number().min(1, 'La durée doit être d\'au moins 1 minute.'),
   difficulty: z.enum(['facile', 'moyen', 'difficile']),
   access: z.enum(['gratuit', 'premium']),
   isMockExam: z.boolean(),
   scheduledFor: z.string().optional(),
   questions: z.array(manualQuestionSchema).min(1, 'Au moins une question est requise.'),
+}).refine(data => {
+  // Check that each question has at least one correct answer
+  return data.questions.every(q => q.options.some(opt => opt.isCorrect));
+}, {
+  message: "Chaque question doit avoir au moins une bonne réponse.",
+  path: ["questions"], 
 }).refine(data => !data.isMockExam || (data.isMockExam && data.scheduledFor), {
     message: "La date du concours blanc est requise.",
     path: ["scheduledFor"],
@@ -58,26 +68,21 @@ export default function AdminQuizzesPage() {
   const router = useRouter();
 
   // AI Generator State
-  const [aiForm, setAiForm] = useState({
-      topic: '',
-      competitionType: '',
-      numberOfQuestions: 10,
-      difficulty: 'moyen' as 'facile' | 'moyen' | 'difficile',
-  });
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
-  
-  // AI Save Options State
-   const [saveOptions, setSaveOptions] = useState({
+  const [generatorState, setGeneratorState] = useState({
+    topic: '',
+    competitionType: '',
+    numberOfQuestions: 10,
+    difficulty: 'moyen' as 'facile' | 'moyen' | 'difficile',
     access: 'gratuit' as 'gratuit' | 'premium',
     isMockExam: false,
     scheduledFor: '',
     category: '',
+    isLoading: false,
+    isSaving: false,
   });
 
-
+  const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
+  
   // Manual Form setup with react-hook-form
     const { register, control, handleSubmit, watch, formState: { errors } } = useForm<ManualQuizFormValues>({
         resolver: zodResolver(manualQuizSchema),
@@ -90,7 +95,7 @@ export default function AdminQuizzesPage() {
             access: 'gratuit',
             isMockExam: false,
             scheduledFor: '',
-            questions: [],
+            questions: [{ question: '', options: [{text: '', isCorrect: false}, {text: '', isCorrect: false}], explanation: '' }],
         },
     });
 
@@ -100,11 +105,12 @@ export default function AdminQuizzesPage() {
     });
     
     const watchIsManualMockExam = watch('isMockExam');
+    const [isSavingManual, setIsSavingManual] = useState(false);
 
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiForm.topic || !aiForm.competitionType) {
+    if (!generatorState.topic || !generatorState.competitionType) {
       toast({
         variant: 'destructive',
         title: 'Champs manquants',
@@ -113,18 +119,18 @@ export default function AdminQuizzesPage() {
       return;
     }
     
-    setIsLoading(true);
+    setGeneratorState(prev => ({...prev, isLoading: true}));
     setGeneratedQuiz(null);
 
     try {
       const result = await generateQuiz({ 
-          topic: aiForm.topic, 
-          competitionType: aiForm.competitionType, 
-          numberOfQuestions: aiForm.numberOfQuestions, 
-          difficulty: aiForm.difficulty 
+        topic: generatorState.topic, 
+        competitionType: generatorState.competitionType, 
+        numberOfQuestions: generatorState.numberOfQuestions, 
+        difficulty: generatorState.difficulty 
       });
       setGeneratedQuiz(result);
-      setSaveOptions(prev => ({...prev, category: aiForm.topic})); // Pre-fill category
+       setGeneratorState(prev => ({...prev, category: prev.topic}));
       toast({
         title: 'Quiz généré !',
         description: 'Votre quiz a été créé avec succès pour validation.',
@@ -137,32 +143,29 @@ export default function AdminQuizzesPage() {
         description: 'Impossible de générer le quiz. Veuillez réessayer.',
       });
     } finally {
-      setIsLoading(false);
+      setGeneratorState(prev => ({...prev, isLoading: false}));
     }
   };
   
   const handleSaveAiQuiz = async () => {
     if (!generatedQuiz) return;
-     if (saveOptions.isMockExam && !saveOptions.scheduledFor) {
+     if (generatorState.isMockExam && !generatorState.scheduledFor) {
       toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez définir une date pour le concours blanc.' });
       return;
     }
-    setIsSaving(true);
+    setGeneratorState(prev => ({...prev, isSaving: true}));
     try {
       const quizDataToSave: Omit<Quiz, 'id'> = {
         ...generatedQuiz.quiz,
-        category: saveOptions.category || aiForm.topic,
-        difficulty: aiForm.difficulty,
-        access_type: saveOptions.access,
-        duration_minutes: aiForm.numberOfQuestions * 1.5,
+        category: generatorState.category || generatorState.topic,
+        difficulty: generatorState.difficulty,
+        access_type: generatorState.access,
+        duration_minutes: generatorState.numberOfQuestions * 1.5,
         total_questions: generatedQuiz.quiz.questions.length,
         createdAt: new Date(),
-        isMockExam: saveOptions.isMockExam,
+        isMockExam: generatorState.isMockExam,
+        ...(generatorState.isMockExam && generatorState.scheduledFor && { scheduledFor: new Date(generatorState.scheduledFor) }),
       };
-
-      if (saveOptions.isMockExam && saveOptions.scheduledFor) {
-        quizDataToSave.scheduledFor = new Date(saveOptions.scheduledFor);
-      }
       
       await saveQuizToFirestore(quizDataToSave);
 
@@ -171,8 +174,13 @@ export default function AdminQuizzesPage() {
           description: 'Le quiz est maintenant disponible pour les utilisateurs.',
       });
       setGeneratedQuiz(null);
-      setAiForm(prev => ({...prev, topic: '', competitionType: ''}));
-
+      setGeneratorState(prev => ({
+        ...prev,
+        topic: '',
+        competitionType: '',
+        category: '',
+        isSaving: false,
+      }));
     } catch (error) {
       console.error("Error saving quiz: ", error);
       toast({
@@ -181,20 +189,12 @@ export default function AdminQuizzesPage() {
           description: 'Le quiz n\'a pas pu être sauvegardé.',
       });
     } finally {
-      setIsSaving(false);
+       setGeneratorState(prev => ({...prev, isSaving: false}));
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copié !',
-      description: 'Le contenu a été copié dans le presse-papiers.',
-    });
-  };
-
   const onSaveManualQuiz = async (data: ManualQuizFormValues) => {
-    setIsSaving(true);
+    setIsSavingManual(true);
     try {
         const manualQuizToSave: Omit<Quiz, 'id'> = {
             title: data.title,
@@ -203,19 +203,17 @@ export default function AdminQuizzesPage() {
             difficulty: data.difficulty,
             access_type: data.access,
             duration_minutes: data.duration,
-            total_questions: data.questions.length,
             createdAt: new Date(),
             isMockExam: data.isMockExam,
             questions: data.questions.map(q => ({
                 question: q.question,
                 options: q.options.map(o => o.text),
-                correctAnswers: q.correctAnswers,
+                correctAnswers: q.options.filter(o => o.isCorrect).map(o => o.text),
                 explanation: q.explanation
             })),
+            total_questions: data.questions.length,
+            ...(data.isMockExam && data.scheduledFor && { scheduledFor: new Date(data.scheduledFor) }),
         };
-        if (data.isMockExam && data.scheduledFor) {
-           manualQuizToSave.scheduledFor = new Date(data.scheduledFor);
-        }
 
         await saveQuizToFirestore(manualQuizToSave);
          toast({
@@ -231,10 +229,9 @@ export default function AdminQuizzesPage() {
           description: 'Le quiz manuel n\'a pas pu être sauvegardé.',
       });
     } finally {
-        setIsSaving(false);
+        setIsSavingManual(false);
     }
   }
-
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -283,18 +280,14 @@ export default function AdminQuizzesPage() {
                                     <Input
                                         id="topic"
                                         placeholder="Ex: Histoire du Burkina Faso"
-                                        value={aiForm.topic}
-                                        onChange={(e) => setAiForm(prev => ({...prev, topic: e.target.value}))}
-                                        disabled={isLoading || isSaving}
+                                        value={generatorState.topic}
+                                        onChange={(e) => setGeneratorState(prev => ({...prev, topic: e.target.value}))}
+                                        disabled={generatorState.isLoading || generatorState.isSaving}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="competitionType">Type de concours</Label>
-                                    <Select 
-                                      onValueChange={(value) => setAiForm(prev => ({...prev, competitionType: value}))} 
-                                      value={aiForm.competitionType} 
-                                      disabled={isLoading || isSaving}
-                                    >
+                                    <Select onValueChange={(value) => setGeneratorState(prev => ({...prev, competitionType: value}))} value={generatorState.competitionType} disabled={generatorState.isLoading || generatorState.isSaving}>
                                         <SelectTrigger id="competitionType">
                                         <SelectValue placeholder="Sélectionner un type" />
                                         </SelectTrigger>
@@ -310,20 +303,16 @@ export default function AdminQuizzesPage() {
                                         <Input
                                             id="numberOfQuestions"
                                             type="number"
-                                            value={aiForm.numberOfQuestions}
-                                            onChange={(e) => setAiForm(prev => ({...prev, numberOfQuestions: parseInt(e.target.value, 10) || 1}))}
+                                            value={generatorState.numberOfQuestions}
+                                            onChange={(e) => setGeneratorState(prev => ({...prev, numberOfQuestions: parseInt(e.target.value, 10) || 1}))}
                                             min="1"
                                             max="50"
-                                            disabled={isLoading || isSaving}
+                                            disabled={generatorState.isLoading || generatorState.isSaving}
                                         />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="difficulty">Difficulté</Label>
-                                        <Select 
-                                          onValueChange={(v: 'facile' | 'moyen' | 'difficile') => setAiForm(prev => ({...prev, difficulty: v}))} 
-                                          value={aiForm.difficulty} 
-                                          disabled={isLoading || isSaving}
-                                        >
+                                        <Select onValueChange={(v: 'facile' | 'moyen' | 'difficile') => setGeneratorState(prev => ({...prev, difficulty: v}))} value={generatorState.difficulty} disabled={generatorState.isLoading || generatorState.isSaving}>
                                             <SelectTrigger id="difficulty"><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="facile">Facile</SelectItem>
@@ -334,8 +323,8 @@ export default function AdminQuizzesPage() {
                                     </div>
                                 </div>
 
-                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving || !aiForm.topic || !aiForm.competitionType}>
-                                    {isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération en cours... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer le Quiz </>)}
+                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={generatorState.isLoading || generatorState.isSaving || !generatorState.topic || !generatorState.competitionType}>
+                                    {generatorState.isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération en cours... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer le Quiz </>)}
                                 </Button>
                             </form>
                         </CardContent>
@@ -348,7 +337,7 @@ export default function AdminQuizzesPage() {
                             <CardDescription>Le quiz généré apparaîtra ici pour validation.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {isLoading && (
+                            {generatorState.isLoading && (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
                                     <BrainCircuit className="w-16 h-16 text-purple-400 animate-pulse" />
                                     <p className="mt-4 text-lg font-semibold text-gray-600">Analyse et création en cours...</p>
@@ -379,11 +368,11 @@ export default function AdminQuizzesPage() {
                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                              <div className="space-y-1.5">
                                                   <Label htmlFor="ai_quiz_category">Catégorie</Label>
-                                                  <Input id="ai_quiz_category" placeholder="Ex: Histoire" value={saveOptions.category} onChange={e => setSaveOptions(prev => ({...prev, category: e.target.value}))} />
+                                                  <Input id="ai_quiz_category" placeholder="Ex: Histoire" value={generatorState.category} onChange={e => setGeneratorState(prev => ({...prev, category: e.target.value}))} />
                                              </div>
                                             <div className="space-y-1.5">
                                                 <Label>Accès</Label>
-                                                <Select onValueChange={(v: 'gratuit' | 'premium') => setSaveOptions(prev => ({...prev, access: v}))} defaultValue={saveOptions.access}>
+                                                <Select onValueChange={(v: 'gratuit' | 'premium') => setGeneratorState(prev => ({...prev, access: v}))} defaultValue={generatorState.access}>
                                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="gratuit">Gratuit</SelectItem>
@@ -393,27 +382,24 @@ export default function AdminQuizzesPage() {
                                             </div>
                                         </div>
                                          <div className="flex items-center space-x-2 pt-4">
-                                            <Switch id="mock-exam-switch" checked={saveOptions.isMockExam} onCheckedChange={checked => setSaveOptions(prev => ({...prev, isMockExam: checked}))} />
+                                            <Switch id="mock-exam-switch" checked={generatorState.isMockExam} onCheckedChange={(checked) => setGeneratorState(prev => ({...prev, isMockExam: checked}))} />
                                             <Label htmlFor="mock-exam-switch">Définir comme Concours Blanc</Label>
                                         </div>
-                                        {saveOptions.isMockExam && (
+                                        {generatorState.isMockExam && (
                                             <div className="space-y-1.5">
                                                 <Label htmlFor="scheduledFor">Date et heure de début</Label>
-                                                <Input id="scheduledFor" type="datetime-local" value={saveOptions.scheduledFor} onChange={e => setSaveOptions(prev => ({...prev, scheduledFor: e.target.value}))} />
+                                                <Input id="scheduledFor" type="datetime-local" value={generatorState.scheduledFor} onChange={e => setGeneratorState(prev => ({...prev, scheduledFor: e.target.value}))} />
                                             </div>
                                         )}
                                      </div>
                                     <div className="flex gap-4">
-                                    <Button onClick={handleSaveAiQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSaving}>
-                                        {isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="mr-2 h-4 w-4" /> Enregistrer ce quiz </>)}
-                                    </Button>
-                                    <Button onClick={() => copyToClipboard(JSON.stringify(generatedQuiz.quiz, null, 2))} variant="outline" className="w-full">
-                                        <Copy className="mr-2 h-4 w-4" /> Copier le JSON du quiz
+                                    <Button onClick={handleSaveAiQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={generatorState.isSaving}>
+                                        {generatorState.isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="mr-2 h-4 w-4" /> Enregistrer ce quiz </>)}
                                     </Button>
                                     </div>
                                 </div>
                             )}
-                            {!isLoading && !generatedQuiz && (
+                            {!generatorState.isLoading && !generatedQuiz && (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
                                     <Wand2 className="w-16 h-16 text-gray-300" />
                                     <p className="mt-4 text-lg font-semibold text-gray-600">En attente de génération</p>
@@ -488,7 +474,7 @@ export default function AdminQuizzesPage() {
                             />
                             <div className="space-y-1.5">
                                 <Label htmlFor="manual_duration">Durée (minutes)</Label>
-                                <Input id="manual_duration" type="number" {...register("duration")} />
+                                <Input id="manual_duration" type="number" {...register("duration", { valueAsNumber: true })} />
                                 {errors.duration && <p className="text-sm text-red-500">{errors.duration.message}</p>}
                             </div>
                         </div>
@@ -514,7 +500,7 @@ export default function AdminQuizzesPage() {
                     <div className="border-t pt-6 space-y-4">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Questions</h3>
-                            <Button type="button" variant="outline" size="sm" onClick={() => appendQuestion({ question: '', options: [{ text: '' }, { text: '' }], correctAnswers: [], explanation: '' })}><PlusCircle className="w-4 h-4 mr-2" />Ajouter une question</Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => appendQuestion({ question: '', options: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }], explanation: '' })}><PlusCircle className="w-4 h-4 mr-2" />Ajouter une question</Button>
                         </div>
                          {errors.questions?.root && <p className="text-sm text-red-500">{errors.questions.root.message}</p>}
 
@@ -535,23 +521,17 @@ export default function AdminQuizzesPage() {
                                         {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex]?.question?.message}</p>}
                                         
                                         <Label className="text-xs text-muted-foreground">Options (cochez la ou les bonnes réponses)</Label>
-                                        {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex]?.correctAnswers?.message}</p>}
+                                        {errors.questions?.[qIndex]?.options?.root && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.options?.root?.message}</p>}
 
                                         {options.map((opt, optIndex) => (
                                             <div key={opt.id} className="flex items-center gap-2">
-                                                <Controller
+                                                 <Controller
                                                     control={control}
-                                                    name={`questions.${qIndex}.correctAnswers`}
+                                                    name={`questions.${qIndex}.options.${optIndex}.isCorrect`}
                                                     render={({ field }) => (
                                                         <Checkbox
-                                                            checked={field.value?.includes(watch(`questions.${qIndex}.options.${optIndex}.text`))}
-                                                            onCheckedChange={(checked) => {
-                                                                const optionText = watch(`questions.${qIndex}.options.${optIndex}.text`);
-                                                                if(!optionText) return;
-                                                                return checked
-                                                                    ? field.onChange([...(field.value || []), optionText])
-                                                                    : field.onChange(field.value?.filter(value => value !== optionText));
-                                                            }}
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
                                                         />
                                                     )}
                                                 />
@@ -559,9 +539,9 @@ export default function AdminQuizzesPage() {
                                                 <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)}><Trash2 className="w-4 h-4"/></Button>
                                             </div>
                                         ))}
-                                        {errors.questions?.[qIndex]?.options?.root && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.options?.root?.message}</p>}
+                                        {errors.questions?.[qIndex]?.options && <p className="text-sm text-red-500">Veuillez remplir toutes les options.</p>}
                                         
-                                        <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ text: '' })}><PlusCircle className="w-4 h-4 mr-2"/>Ajouter une option</Button>
+                                        <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ text: '', isCorrect: false })}><PlusCircle className="w-4 h-4 mr-2"/>Ajouter une option</Button>
                                         <Textarea placeholder="Explication de la bonne réponse (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
                                     </div>
                                 </Card>
@@ -569,8 +549,8 @@ export default function AdminQuizzesPage() {
                          })}
                     </div>
 
-                    <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSaving}>
-                        {isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="w-4 h-4" /> Enregistrer le quiz manuel</>)}
+                    <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSavingManual}>
+                        {isSavingManual ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="w-4 h-4" /> Enregistrer le quiz manuel</>)}
                     </Button>
                  </CardContent>
                </Card>

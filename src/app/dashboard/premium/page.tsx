@@ -16,6 +16,23 @@ const premiumFeatures = [
     { icon: CheckCircle, text: 'Support prioritaire' },
 ];
 
+const OrangeMoneyLogo = () => (
+  <svg width="60" height="24" viewBox="0 0 100 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M50 0H10C4.47715 0 0 4.47715 0 10V30C0 35.5228 4.47715 40 10 40H90C95.5228 40 100 35.5228 100 30V10C100 4.47715 95.5228 0 90 0H50Z" fill="#212121"/>
+    <path d="M23.32 15.16C23.32 12.32 21.04 10 18.2 10C15.36 10 13.08 12.32 13.08 15.16C13.08 18 15.36 20.32 18.2 20.32C21.04 20.32 23.32 18 23.32 15.16ZM34.96 15C34.96 11.8 32.48 9.28 29.32 9.28C26.16 9.28 23.68 11.8 23.68 15C23.68 18.2 26.16 20.72 29.32 20.72C32.48 20.72 34.96 18.2 34.96 15ZM29.32 18.96C27.28 18.96 25.6 17.28 25.6 15.24C25.6 13.2 27.28 11.52 29.32 11.52C31.36 11.52 33.04 13.2 33.04 15.24C33.04 17.28 31.36 18.96 29.32 18.96ZM18.2 18.56C16.48 18.56 15.08 17.08 15.08 15.16C15.08 13.24 16.48 11.76 18.2 11.76C19.92 11.76 21.32 13.24 21.32 15.16C21.32 17.08 19.92 18.56 18.2 18.56Z" fill="#FF7900"/>
+    <text x="40" y="26" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold" fill="#FF7900">money</text>
+  </svg>
+)
+
+const MoovMoneyLogo = () => (
+ <svg width="60" height="24" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="40" rx="8" fill="#00AEEF"/>
+    <text x="10" y="28" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold" fill="white">Moov</text>
+    <text x="68" y="28" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold" fill="#2E3192">Money</text>
+  </svg>
+)
+
+
 export default function PremiumPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -63,9 +80,17 @@ export default function PremiumPage() {
                     <Rocket className="w-5 h-5 mr-3" />
                     Je deviens Premium
                 </Button>
-                 <p className="text-xs text-center text-muted-foreground mt-4">
-                    Paiement sécurisé. Annulation possible à tout moment.
-                </p>
+                 <div className="text-center mt-6">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Paiement sécurisé via Mobile Money :</p>
+                    <div className="flex justify-center items-center gap-4">
+                        <div className="p-2 rounded-lg bg-white shadow-md">
+                          <OrangeMoneyLogo />
+                        </div>
+                        <div className="p-2 rounded-lg bg-white shadow-md">
+                           <MoovMoneyLogo />
+                        </div>
+                    </div>
+                 </div>
             </CardContent>
         </Card>
       </div>

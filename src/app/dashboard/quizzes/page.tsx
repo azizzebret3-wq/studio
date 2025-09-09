@@ -61,8 +61,10 @@ export default function QuizzesPage() {
     const fetchQuizzes = async () => {
       setIsLoadingQuizzes(true);
       try {
-        const fetchedQuizzes = await getQuizzesFromFirestore();
-        setQuizzes(fetchedQuizzes);
+        const allQuizzes = await getQuizzesFromFirestore();
+        // Exclude mock exams from the general quiz list
+        const regularQuizzes = allQuizzes.filter(q => !q.isMockExam);
+        setQuizzes(regularQuizzes);
       } catch (error) {
         toast({
           variant: 'destructive',

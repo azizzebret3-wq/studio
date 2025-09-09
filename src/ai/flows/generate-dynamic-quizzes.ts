@@ -16,6 +16,7 @@ const GenerateQuizInputSchema = z.object({
   competitionType: z.string().describe('The type of competition the quiz should be tailored for.'),
   topic: z.string().describe('The topic of the quiz.'),
   numberOfQuestions: z.number().describe('The number of questions to generate.'),
+  difficulty: z.string().describe('The difficulty of the quiz (e.g., facile, moyen, difficile).'),
 });
 export type GenerateQuizInput = z.infer<typeof GenerateQuizInputSchema>;
 
@@ -43,11 +44,12 @@ const generateQuizPrompt = ai.definePrompt({
   name: 'generateQuizPrompt',
   input: {schema: GenerateQuizInputSchema},
   output: {schema: GenerateQuizOutputSchema},
-  prompt: `You are a quiz generator that creates quizzes based on the competition type, topic and number of questions specified by the user.
+  prompt: `You are a quiz generator that creates quizzes based on the competition type, topic, number of questions, and difficulty specified by the user.
 
 Generate a quiz for the following competition type: {{{competitionType}}}.
 The quiz should be on the following topic: {{{topic}}}.
 The quiz should have the following number of questions: {{{numberOfQuestions}}}.
+The quiz should have the following difficulty: {{{difficulty}}}.
 
 The quiz should have a title and a description.
 Each question should have:
@@ -57,7 +59,7 @@ Each question should have:
 - An optional, brief explanation for the correct answer(s).
 
 Make sure that all correct answers are always included in the options array.
-Ensure that the quiz is tailored to the specified competition type and topic.
+Ensure that the quiz is tailored to the specified competition type, topic, and difficulty.
 `, 
 });
 

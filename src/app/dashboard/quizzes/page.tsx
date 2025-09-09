@@ -50,6 +50,7 @@ export default function QuizzesPage() {
   const [topic, setTopic] = useState('');
   const [competitionType, setCompetitionType] = useState('');
   const [numberOfQuestions, setNumberOfQuestions] = useState(10);
+  const [difficulty, setDifficulty] = useState('moyen');
   const [isGenerating, setIsGenerating] = useState(false);
   
   const canGenerate = userData?.role === 'admin' || userData?.subscription_type === 'premium';
@@ -107,7 +108,7 @@ export default function QuizzesPage() {
     setIsGenerating(true);
 
     try {
-      const result = await generateQuiz({ topic, competitionType, numberOfQuestions });
+      const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty });
       sessionStorage.setItem('generatedQuiz', JSON.stringify(result));
       toast({
         title: 'Quiz généré !',
@@ -162,8 +163,8 @@ export default function QuizzesPage() {
         </CardHeader>
         <CardContent>
           {canGenerate ? (
-             <form onSubmit={handleGenerateQuiz} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div className="space-y-1.5 md:col-span-2">
+             <form onSubmit={handleGenerateQuiz} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
                     <Label htmlFor="topic">Sujet</Label>
                     <Input
                         id="topic"
@@ -185,7 +186,32 @@ export default function QuizzesPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <Button type="submit" className="w-full h-10 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold" disabled={isGenerating}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="difficulty">Difficulté</Label>
+                  <Select onValueChange={setDifficulty} value={difficulty} disabled={isGenerating}>
+                    <SelectTrigger id="difficulty">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facile">Facile</SelectItem>
+                      <SelectItem value="moyen">Moyen</SelectItem>
+                      <SelectItem value="difficile">Difficile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="numberOfQuestions">Questions</Label>
+                  <Input
+                    id="numberOfQuestions"
+                    type="number"
+                    value={numberOfQuestions}
+                    onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10))}
+                    min="1"
+                    max="50"
+                    disabled={isGenerating}
+                  />
+                </div>
+                 <Button type="submit" className="w-full h-10 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold xl:col-span-1" disabled={isGenerating || !topic || !competitionType}>
                     {isGenerating ? (
                         <>
                         <Loader className="mr-2 h-4 w-4 animate-spin" />

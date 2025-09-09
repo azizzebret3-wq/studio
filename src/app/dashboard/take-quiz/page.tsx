@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getQuizzesFromFirestore, Quiz, saveAttemptToFirestore } from '@/lib/firestore.service';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,7 +33,6 @@ export default function TakeQuizPage() {
   
   const [quiz, setQuiz] = useState<ActiveQuiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const [userAnswers, setUserAnswers] = useState<string[][]>([]);
   const [quizFinished, setQuizFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes default
@@ -50,7 +49,9 @@ export default function TakeQuizPage() {
       const quizData = sessionStorage.getItem('generatedQuiz');
       if (quizData) {
         const parsedData: GenerateQuizOutput = JSON.parse(quizData);
-        setQuiz({...parsedData.quiz, id: `generated-${Date.now()}`});
+        const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
+        setQuiz(activeQuiz);
+        setUserAnswers(Array(activeQuiz.questions.length).fill([]));
         setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
       } else {
         toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
@@ -62,6 +63,7 @@ export default function TakeQuizPage() {
         const foundQuiz = allQuizzes.find(q => q.id === quizId);
         if (foundQuiz) {
           setQuiz(foundQuiz);
+          setUserAnswers(Array(foundQuiz.questions.length).fill([]));
           setTimeLeft(foundQuiz.duration_minutes * 60);
         } else {
           toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
@@ -81,18 +83,17 @@ export default function TakeQuizPage() {
     loadQuiz();
   }, [loadQuiz]);
   
-  const handleFinishQuiz = useCallback(async (finalAnswers?: string[][]) => {
+  const handleFinishQuiz = useCallback(async () => {
     if (!quiz || !user) return;
 
     if (source === 'generated') {
       sessionStorage.removeItem('generatedQuiz');
     }
     
-    const answersToProcess = finalAnswers || [...userAnswers, selectedAnswers];
     setQuizFinished(true);
 
     const newResults: QuestionResult[] = quiz.questions.map((q, index) => {
-      const userSelection = answersToProcess[index] || [];
+      const userSelection = userAnswers[index] || [];
       const isCorrect =
         q.correctAnswers.length === userSelection.length &&
         q.correctAnswers.every((ans) => userSelection.includes(ans));
@@ -108,7 +109,6 @@ export default function TakeQuizPage() {
     });
     setResults(newResults);
 
-    // Save attempt to Firestore
     const score = newResults.filter(r => r.isCorrect).length;
     const totalQuestions = quiz.questions.length;
     
@@ -128,8 +128,7 @@ export default function TakeQuizPage() {
         console.error("Failed to save attempt", error);
         toast({ title: 'Erreur', description: "Impossible d'enregistrer vos résultats.", variant: 'destructive' });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quiz, user, source, userAnswers, selectedAnswers]);
+  }, [quiz, user, source, userAnswers, toast]);
 
   useEffect(() => {
     if (quiz && !quizFinished && timeLeft > 0) {
@@ -144,20 +143,26 @@ export default function TakeQuizPage() {
 
 
   const handleNextQuestion = () => {
-    const newAnswers = [...userAnswers, selectedAnswers];
-    setUserAnswers(newAnswers);
-    setSelectedAnswers([]);
-    if (currentQuestionIndex < quiz!.questions.length - 1) {
+    if (!quiz) return;
+    if (currentQuestionIndex < quiz.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      handleFinishQuiz(newAnswers);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
   
   const handleAnswerChange = (option: string) => {
-    setSelectedAnswers(prev => 
-      prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
-    );
+    const newAnswers = [...userAnswers];
+    const currentAnswers = newAnswers[currentQuestionIndex] || [];
+    const updatedAnswers = currentAnswers.includes(option)
+      ? currentAnswers.filter(item => item !== option)
+      : [...currentAnswers, option];
+    newAnswers[currentQuestionIndex] = updatedAnswers;
+    setUserAnswers(newAnswers);
   };
 
   if (loading || !quiz) {
@@ -241,6 +246,7 @@ export default function TakeQuizPage() {
   }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
+  const selectedAnswersForCurrent = userAnswers[currentQuestionIndex] || [];
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
@@ -265,7 +271,7 @@ export default function TakeQuizPage() {
                  <div key={index} className="flex items-center space-x-3 p-3 rounded-lg bg-white/50 dark:bg-black/20 hover:bg-purple-50 dark:hover:bg-purple-900/50 transition-all">
                     <Checkbox 
                         id={`option-${index}`}
-                        checked={selectedAnswers.includes(option)}
+                        checked={selectedAnswersForCurrent.includes(option)}
                         onCheckedChange={() => handleAnswerChange(option)}
                     />
                     <Label htmlFor={`option-${index}`} className="font-medium flex-1 cursor-pointer">
@@ -277,9 +283,22 @@ export default function TakeQuizPage() {
              <p className="text-xs text-muted-foreground text-center">
               Cette question peut avoir une ou plusieurs bonnes réponses.
             </p>
-            <Button onClick={handleNextQuestion} className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold shadow-lg" disabled={selectedAnswers.length === 0}>
-              {currentQuestionIndex === quiz.questions.length - 1 ? 'Terminer le Quiz' : 'Question Suivante'}
-            </Button>
+            <div className="flex justify-between gap-4">
+              <Button onClick={handlePreviousQuestion} variant="outline" disabled={currentQuestionIndex === 0}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Précédent
+              </Button>
+              {currentQuestionIndex === quiz.questions.length - 1 ? (
+                <Button onClick={() => handleFinishQuiz()} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold shadow-lg">
+                  Terminer le Quiz
+                </Button>
+              ) : (
+                <Button onClick={handleNextQuestion} className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold shadow-lg">
+                  Suivant
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

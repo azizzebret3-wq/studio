@@ -26,9 +26,9 @@ import { Switch } from '@/components/ui/switch';
 
 
 type ManualQuestion = {
-  id: number;
+  id: string; // Use string for stable key
   question: string;
-  options: { id: number, text: string }[];
+  options: { id: string, text: string }[];
   correctAnswers: string[];
   explanation: string;
 }
@@ -41,10 +41,13 @@ export default function AdminQuizzesPage() {
   const [topic, setTopic] = useState('');
   const [competitionType, setCompetitionType] = useState('');
   const [numberOfQuestions, setNumberOfQuestions] = useState(10);
+  const [quizDifficulty, setQuizDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
-  const [quizDifficulty, setQuizDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
+  
+  // AI Save Options State
   const [quizAccess, setQuizAccess] = useState<'gratuit' | 'premium'>('gratuit');
   const [isMockExam, setIsMockExam] = useState(false);
   const [scheduledFor, setScheduledFor] = useState('');
@@ -147,44 +150,50 @@ export default function AdminQuizzesPage() {
 
   const addManualQuestion = () => {
     const newQuestion: ManualQuestion = {
-        id: Date.now(),
+        id: `q_${Date.now()}`,
         question: '',
-        options: [{id: 1, text: ''}, {id: 2, text: ''}],
+        options: [{id: `opt_${Date.now()}_1`, text: ''}, {id: `opt_${Date.now()}_2`, text: ''}],
         correctAnswers: [],
         explanation: '',
     };
     setManualQuestions(prev => [...prev, newQuestion]);
   };
 
-  const removeManualQuestion = (id: number) => {
+  const removeManualQuestion = (id: string) => {
     setManualQuestions(prev => prev.filter(q => q.id !== id));
   };
   
-  const handleManualQuestionChange = (id: number, field: keyof Omit<ManualQuestion, 'id' | 'options'>, value: any) => {
+  const handleManualQuestionChange = (id: string, field: keyof Omit<ManualQuestion, 'id' | 'options' | 'correctAnswers'>, value: string) => {
       setManualQuestions(prev => prev.map(q => q.id === id ? {...q, [field]: value} : q));
   }
 
-  const handleOptionChange = (qId: number, optId: number, text: string) => {
-      setManualQuestions(prev => prev.map(q => q.id === qId ? {
-          ...q,
-          options: q.options.map(opt => opt.id === optId ? {...opt, text} : opt)
-      } : q));
+  const handleOptionChange = (qId: string, optId: string, text: string) => {
+    setManualQuestions(prev => prev.map(q => {
+        if (q.id === qId) {
+            const newOptions = q.options.map(opt => opt.id === optId ? {...opt, text} : opt);
+            return {...q, options: newOptions};
+        }
+        return q;
+    }));
   }
   
-  const addOption = (qId: number) => {
+  const addOption = (qId: string) => {
     setManualQuestions(prev => prev.map(q => q.id === qId ? {
       ...q,
-      options: [...q.options, { id: Date.now(), text: '' }]
+      options: [...q.options, { id: `opt_${Date.now()}`, text: '' }]
     } : q));
   }
 
-  const handleCorrectAnswerChange = (qId: number, optionText: string, isChecked: boolean) => {
+  const handleCorrectAnswerChange = (qId: string, optionText: string, isChecked: boolean) => {
     setManualQuestions(prev => prev.map(q => {
       if (q.id === qId) {
-        const newCorrectAnswers = isChecked
-          ? [...q.correctAnswers, optionText]
-          : q.correctAnswers.filter(ans => ans !== optionText);
-        return { ...q, correctAnswers: newCorrectAnswers };
+        const currentCorrect = new Set(q.correctAnswers);
+        if(isChecked) {
+          currentCorrect.add(optionText);
+        } else {
+          currentCorrect.delete(optionText);
+        }
+        return { ...q, correctAnswers: Array.from(currentCorrect) };
       }
       return q;
     }));
@@ -318,7 +327,7 @@ export default function AdminQuizzesPage() {
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="difficulty">Difficulté</Label>
-                                        <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue={quizDifficulty} disabled={isLoading || isSaving}>
+                                        <Select onValueChange={(v) => setQuizDifficulty(v as any)} value={quizDifficulty} disabled={isLoading || isSaving}>
                                             <SelectTrigger id="difficulty"><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="facile">Facile</SelectItem>
@@ -495,6 +504,7 @@ export default function AdminQuizzesPage() {
                                 {q.options.map((opt, optIndex) => (
                                     <div key={opt.id} className="flex items-center gap-2">
                                         <Checkbox 
+                                          id={opt.id}
                                           checked={q.correctAnswers.includes(opt.text)}
                                           onCheckedChange={(checked) => handleCorrectAnswerChange(q.id, opt.text, Boolean(checked))}
                                           disabled={!opt.text}

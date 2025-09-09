@@ -23,6 +23,7 @@ import {
   Bell,
   Moon,
   Sun,
+  CalendarClock,
 } from 'lucide-react';
 import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import { Logo } from '@/components/logo';
 const userNavItems = [
   { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
+  { title: "Concours Blancs", url: "/dashboard/mock-exams", icon: CalendarClock, gradient: "from-indigo-500 to-blue-500" },
   { title: "Bibliothèque", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy, gradient: "from-rose-500 to-pink-500" },
 ];
@@ -408,9 +410,9 @@ export default function DashboardLayout({
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
-             <div className="grid grid-cols-4 gap-1 p-2">
+             <div className="grid grid-cols-5 gap-1 p-2">
                  {userNavItems.map((item) => (
-                     <Link key={item.title} href={item.url}>
+                     <Link key={item.title} href={item.url} className={item.title === 'Formations' ? 'hidden' : ''}>
                          <Button
                              variant="ghost"
                              className={`flex flex-col gap-1 h-auto py-2 px-1 rounded-xl font-medium text-xs transition-all w-full ${

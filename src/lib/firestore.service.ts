@@ -19,6 +19,8 @@ export interface Quiz {
   duration_minutes: number;
   total_questions: number;
   createdAt: Date;
+  isMockExam?: boolean;
+  scheduledFor?: Date;
 }
 
 // Define the structure of a User document from Firestore
@@ -88,11 +90,22 @@ export const getQuizzesFromFirestore = async (): Promise<Quiz[]> => {
             } else {
                 createdAt = new Date();
             }
+            
+            let scheduledFor: Date | undefined;
+             if (data.scheduledFor instanceof Timestamp) {
+                scheduledFor = data.scheduledFor.toDate();
+            } else if (data.scheduledFor && typeof data.scheduledFor.seconds === 'number') {
+                scheduledFor = new Timestamp(data.scheduledFor.seconds, data.scheduledFor.nanoseconds).toDate();
+            } else if (data.scheduledFor) {
+                scheduledFor = new Date(data.scheduledFor);
+            }
+
 
             return {
                 id: doc.id,
                 ...data,
                 createdAt,
+                scheduledFor,
             } as Quiz;
         });
         return quizzes;

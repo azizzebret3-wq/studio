@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2 } from 'lucide-react';
+import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2, CalendarClock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -21,6 +21,7 @@ import { saveQuizToFirestore, Quiz } from '@/lib/firestore.service';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 
 type ManualQuestion = {
@@ -43,6 +44,9 @@ export default function AdminQuizzesPage() {
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
   const [quizDifficulty, setQuizDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
   const [quizAccess, setQuizAccess] = useState<'gratuit' | 'premium'>('gratuit');
+  const [isMockExam, setIsMockExam] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState('');
+
 
   // Manual Creator State
   const [manualQuizTitle, setManualQuizTitle] = useState('');
@@ -50,6 +54,8 @@ export default function AdminQuizzesPage() {
   const [manualQuizCategory, setManualQuizCategory] = useState('');
   const [manualQuizDuration, setManualQuizDuration] = useState(15);
   const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>([]);
+  const [isManualMockExam, setIsManualMockExam] = useState(false);
+  const [manualScheduledFor, setManualScheduledFor] = useState('');
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +72,7 @@ export default function AdminQuizzesPage() {
     setGeneratedQuiz(null);
 
     try {
-      const result = await generateQuiz({ topic, competitionType, numberOfQuestions });
+      const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty: 'moyen' });
       setGeneratedQuiz(result);
       setManualQuizCategory(topic); // Pre-fill category
       toast({
@@ -87,6 +93,10 @@ export default function AdminQuizzesPage() {
   
   const handleSaveQuiz = async () => {
     if (!generatedQuiz) return;
+     if (isMockExam && !scheduledFor) {
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez définir une date pour le concours blanc.' });
+      return;
+    }
     setIsSaving(true);
     try {
       const quizDataToSave: Omit<Quiz, 'id'> = {
@@ -97,6 +107,8 @@ export default function AdminQuizzesPage() {
         duration_minutes: numberOfQuestions * 1,
         total_questions: generatedQuiz.quiz.questions.length,
         createdAt: new Date(),
+        isMockExam,
+        scheduledFor: isMockExam ? new Date(scheduledFor) : undefined,
       };
       
       await saveQuizToFirestore(quizDataToSave);
@@ -172,6 +184,10 @@ export default function AdminQuizzesPage() {
   };
 
   const handleSaveManualQuiz = async () => {
+     if (isManualMockExam && !manualScheduledFor) {
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez définir une date pour le concours blanc.' });
+      return;
+    }
     setIsSaving(true);
     try {
         const manualQuizToSave: Omit<Quiz, 'id'> = {
@@ -183,6 +199,8 @@ export default function AdminQuizzesPage() {
             duration_minutes: manualQuizDuration,
             total_questions: manualQuestions.length,
             createdAt: new Date(),
+            isMockExam: isManualMockExam,
+            scheduledFor: isManualMockExam ? new Date(manualScheduledFor) : undefined,
             questions: manualQuestions.map(q => ({
                 question: q.question,
                 options: q.options.map(o => o.text),
@@ -323,29 +341,42 @@ export default function AdminQuizzesPage() {
                                         </AccordionItem>
                                         ))}
                                     </Accordion>
-                                     <div className="grid grid-cols-2 gap-4">
-                                         <div className="space-y-1.5">
-                                            <Label>Difficulté</Label>
-                                            <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue="moyen">
-                                                <SelectTrigger><SelectValue/></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="facile">Facile</SelectItem>
-                                                    <SelectItem value="moyen">Moyen</SelectItem>
-                                                    <SelectItem value="difficile">Difficile</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                     <div className="space-y-4 p-4 border rounded-lg">
+                                        <h3 className="font-semibold mb-2">Options de sauvegarde</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label>Difficulté</Label>
+                                                <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue="moyen">
+                                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="facile">Facile</SelectItem>
+                                                        <SelectItem value="moyen">Moyen</SelectItem>
+                                                        <SelectItem value="difficile">Difficile</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label>Accès</Label>
+                                                <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue="gratuit">
+                                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="gratuit">Gratuit</SelectItem>
+                                                        <SelectItem value="premium">Premium</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
-                                         <div className="space-y-1.5">
-                                            <Label>Accès</Label>
-                                            <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue="gratuit">
-                                                <SelectTrigger><SelectValue/></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="gratuit">Gratuit</SelectItem>
-                                                    <SelectItem value="premium">Premium</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                         <div className="flex items-center space-x-2 pt-4">
+                                            <Switch id="mock-exam-switch" checked={isMockExam} onCheckedChange={setIsMockExam} />
+                                            <Label htmlFor="mock-exam-switch">Définir comme Concours Blanc</Label>
                                         </div>
-                                    </div>
+                                        {isMockExam && (
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="scheduledFor">Date et heure de début</Label>
+                                                <Input id="scheduledFor" type="datetime-local" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} />
+                                            </div>
+                                        )}
+                                     </div>
                                     <div className="flex gap-4">
                                     <Button onClick={handleSaveQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSaving}>
                                         {isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="mr-2 h-4 w-4" /> Enregistrer ce quiz </>)}
@@ -389,33 +420,46 @@ export default function AdminQuizzesPage() {
                     <Label htmlFor="manual_description">Description du Quiz</Label>
                     <Textarea id="manual_description" placeholder="Une brève description du quiz" value={manualQuizDescription} onChange={e => setManualQuizDescription(e.target.value)} />
                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                        <Label>Difficulté</Label>
-                        <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue="moyen">
-                            <SelectTrigger><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="facile">Facile</SelectItem>
-                                <SelectItem value="moyen">Moyen</SelectItem>
-                                <SelectItem value="difficile">Difficile</SelectItem>
-                            </SelectContent>
-                        </Select>
+                 <div className="space-y-4 p-4 border rounded-lg">
+                    <h3 className="font-semibold mb-2">Options du quiz</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                            <Label>Difficulté</Label>
+                            <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue="moyen">
+                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="facile">Facile</SelectItem>
+                                    <SelectItem value="moyen">Moyen</SelectItem>
+                                    <SelectItem value="difficile">Difficile</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label>Accès</Label>
+                            <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue="gratuit">
+                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="gratuit">Gratuit</SelectItem>
+                                    <SelectItem value="premium">Premium</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="manual_duration">Durée (minutes)</Label>
+                            <Input id="manual_duration" type="number" value={manualQuizDuration} onChange={e => setManualQuizDuration(Number(e.target.value))} />
+                        </div>
                     </div>
-                     <div className="space-y-1.5">
-                        <Label>Accès</Label>
-                        <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue="gratuit">
-                            <SelectTrigger><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="gratuit">Gratuit</SelectItem>
-                                <SelectItem value="premium">Premium</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="flex items-center space-x-2 pt-4">
+                        <Switch id="manual-mock-exam" checked={isManualMockExam} onCheckedChange={setIsManualMockExam} />
+                        <Label htmlFor="manual-mock-exam">Définir comme Concours Blanc</Label>
                     </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="manual_duration">Durée (minutes)</Label>
-                        <Input id="manual_duration" type="number" value={manualQuizDuration} onChange={e => setManualQuizDuration(Number(e.target.value))} />
-                    </div>
-                </div>
+                    {isManualMockExam && (
+                        <div className="space-y-1.5">
+                            <Label htmlFor="manual_scheduledFor">Date et heure de début</Label>
+                            <Input id="manual_scheduledFor" type="datetime-local" value={manualScheduledFor} onChange={e => setManualScheduledFor(e.target.value)} />
+                        </div>
+                    )}
+                 </div>
 
                 <div className="border-t pt-6 space-y-4">
                     <div className="flex justify-between items-center">

@@ -170,10 +170,15 @@ export default function AdminQuizzesPage() {
   const handleOptionChange = (qId: string, optId: string, text: string) => {
     setManualQuestions(prev => prev.map(q => {
         if (q.id === qId) {
-            const newOptions = q.options.map(opt => opt.id === optId ? {...opt, text} : opt);
-            // If an option that was a correct answer is changed, remove it from correctAnswers
             const oldOptionText = q.options.find(opt => opt.id === optId)?.text;
-            const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== oldOptionText);
+            const newOptions = q.options.map(opt => opt.id === optId ? {...opt, text} : opt);
+            
+            // If an option that was a correct answer is changed, update correctAnswers array as well
+            let newCorrectAnswers = [...q.correctAnswers];
+            if (oldOptionText && q.correctAnswers.includes(oldOptionText)) {
+                newCorrectAnswers = newCorrectAnswers.filter(ans => ans !== oldOptionText);
+                newCorrectAnswers.push(text);
+            }
             
             return {...q, options: newOptions, correctAnswers: newCorrectAnswers};
         }
@@ -335,7 +340,7 @@ export default function AdminQuizzesPage() {
                                             id="numberOfQuestions"
                                             type="number"
                                             value={numberOfQuestions}
-                                            onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10))}
+                                            onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10) || 1)}
                                             min="1"
                                             max="50"
                                             disabled={isLoading || isSaving}
@@ -492,7 +497,7 @@ export default function AdminQuizzesPage() {
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="manual_duration">Durée (minutes)</Label>
-                            <Input id="manual_duration" type="number" value={manualQuizDuration} onChange={e => setManualQuizDuration(Number(e.target.value))} />
+                            <Input id="manual_duration" type="number" value={manualQuizDuration} onChange={e => setManualQuizDuration(Number(e.target.value) || 0)} />
                         </div>
                     </div>
                     <div className="flex items-center space-x-2 pt-4">

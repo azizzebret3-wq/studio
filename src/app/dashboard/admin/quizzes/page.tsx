@@ -58,6 +58,9 @@ export default function AdminQuizzesPage() {
   const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>([]);
   const [isManualMockExam, setIsManualMockExam] = useState(false);
   const [manualScheduledFor, setManualScheduledFor] = useState('');
+  const [manualQuizAccess, setManualQuizAccess] = useState<'gratuit' | 'premium'>('gratuit');
+  const [manualQuizDifficulty, setManualQuizDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
+
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,7 +160,7 @@ export default function AdminQuizzesPage() {
     setManualQuestions(prev => prev.filter(q => q.id !== id));
   };
   
-  const handleManualQuestionChange = (id: number, field: keyof ManualQuestion, value: any) => {
+  const handleManualQuestionChange = (id: number, field: keyof Omit<ManualQuestion, 'id' | 'options'>, value: any) => {
       setManualQuestions(prev => prev.map(q => q.id === id ? {...q, [field]: value} : q));
   }
 
@@ -198,8 +201,8 @@ export default function AdminQuizzesPage() {
             title: manualQuizTitle,
             description: manualQuizDescription,
             category: manualQuizCategory,
-            difficulty: quizDifficulty,
-            access_type: quizAccess,
+            difficulty: manualQuizDifficulty,
+            access_type: manualQuizAccess,
             duration_minutes: manualQuizDuration,
             total_questions: manualQuestions.length,
             createdAt: new Date(),
@@ -439,7 +442,7 @@ export default function AdminQuizzesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1.5">
                             <Label>Difficulté</Label>
-                            <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue="moyen">
+                            <Select onValueChange={(v) => setManualQuizDifficulty(v as any)} value={manualQuizDifficulty}>
                                 <SelectTrigger><SelectValue/></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="facile">Facile</SelectItem>
@@ -450,7 +453,7 @@ export default function AdminQuizzesPage() {
                         </div>
                         <div className="space-y-1.5">
                             <Label>Accès</Label>
-                            <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue="gratuit">
+                            <Select onValueChange={(v) => setManualQuizAccess(v as any)} value={manualQuizAccess}>
                                 <SelectTrigger><SelectValue/></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="gratuit">Gratuit</SelectItem>
@@ -487,7 +490,7 @@ export default function AdminQuizzesPage() {
                                 <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeManualQuestion(q.id)}><Trash2 className="w-4 h-4"/></Button>
                             </div>
                             <div className="space-y-3">
-                                <Input placeholder="Texte de la question" value={q.question} onChange={e => handleManualQuestionChange(q.id, 'question', e.target.value)}/>
+                                <Textarea placeholder="Texte de la question" value={q.question} onChange={e => handleManualQuestionChange(q.id, 'question', e.target.value)}/>
                                 <Label className="text-xs">Options (cochez la ou les bonnes réponses)</Label>
                                 {q.options.map((opt, optIndex) => (
                                     <div key={opt.id} className="flex items-center gap-2">

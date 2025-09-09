@@ -83,21 +83,21 @@ export default function Home() {
 
   const testimonials = [
     {
-      name: "Marie Kouadio",
-      role: "Admise au concours direct ENS",
+      name: "Étudiante admise",
+      role: "Concours direct ENS",
       text: "Grâce aux quiz interactifs et au suivi personnalisé, j'ai pu identifier mes lacunes et m'améliorer rapidement. Les animations rendent l'apprentissage amusant !",
       rating: 5,
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60&h=60&fit=crop&q=80&facepad=2"
     },
     {
-      name: "Jean Baptiste",
+      name: "Candidat en reconversion",
       role: "Concours professionnel Fonction Publique",
       text: "La qualité des contenus et l'interface moderne ont transformé ma préparation en expérience immersive. Les formations vidéo sont exceptionnelles !",
       rating: 5,
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&q=80&facepad=2"
     },
     {
-      name: "Fatou Traoré",
+      name: "Nouvelle candidate",
       role: "Concours direct INPHB",
       text: "Le système de badges et de progression m'a motivée tout au long de ma préparation. J'ai gagné 40 points en moyenne !",
       rating: 5,
@@ -106,10 +106,10 @@ export default function Home() {
   ];
 
   const stats = [
-    { number: "10,000+", label: "Étudiants actifs", icon: Users },
-    { number: "95%", label: "Taux de réussite", icon: Trophy },
-    { number: "500+", label: "Quiz disponibles", icon: Play },
-    { number: "50+", label: "Heures de vidéos", icon: BookOpen },
+    { label: "Candidats Motivés", icon: Users },
+    { label: "Taux de Réussite Élevé", icon: Trophy },
+    { label: "Centaines de Quiz", icon: Play },
+    { label: "Formations Vidéo", icon: BookOpen },
   ];
 
   return (
@@ -232,8 +232,7 @@ export default function Home() {
             {stats.map((stat, index) => (
               <div key={index} className="glassmorphism rounded-2xl p-6 text-center backdrop-blur-lg">
                 <stat.icon className="w-8 h-8 mx-auto mb-3 text-yellow-300" />
-                <div className="text-2xl font-bold text-white">{stat.number}</div>
-                <div className="text-sm text-blue-100 font-medium">{stat.label}</div>
+                <div className="text-lg font-bold text-white">{stat.label}</div>
               </div>
             ))}
           </div>

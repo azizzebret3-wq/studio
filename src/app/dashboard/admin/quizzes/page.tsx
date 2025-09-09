@@ -116,7 +116,7 @@ export default function AdminQuizzesPage() {
         total_questions: generatedQuiz.quiz.questions.length,
         createdAt: new Date(),
         isMockExam,
-        scheduledFor: isMockExam ? new Date(scheduledFor) : undefined,
+        ...(isMockExam && { scheduledFor: new Date(scheduledFor) }),
       };
       
       await saveQuizToFirestore(quizDataToSave);
@@ -237,13 +237,13 @@ export default function AdminQuizzesPage() {
             total_questions: manualQuestions.length,
             createdAt: new Date(),
             isMockExam: isManualMockExam,
-            scheduledFor: isManualMockExam ? new Date(manualScheduledFor) : undefined,
             questions: manualQuestions.map(q => ({
                 question: q.question,
                 options: q.options.map(o => o.text),
                 correctAnswers: q.correctAnswers,
                 explanation: q.explanation
             })),
+            ...(isManualMockExam && { scheduledFor: new Date(manualScheduledFor) }),
         };
         await saveQuizToFirestore(manualQuizToSave);
          toast({
@@ -497,7 +497,7 @@ export default function AdminQuizzesPage() {
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="manual_duration">Durée (minutes)</Label>
-                            <Input id="manual_duration" type="number" value={manualQuizDuration} onChange={e => setManualQuizDuration(Number(e.target.value) || 0)} />
+                            <Input id="manual_duration" type="number" value={manualQuizDuration || ''} onChange={e => setManualQuizDuration(Number(e.target.value))} />
                         </div>
                     </div>
                     <div className="flex items-center space-x-2 pt-4">
@@ -546,7 +546,7 @@ export default function AdminQuizzesPage() {
                 </div>
 
                 <Button onClick={handleSaveManualQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSaving || manualQuestions.length === 0 || !manualQuizTitle}>
-                    {isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="mr-2 h-4 w-4" /> Enregistrer le quiz manuel</>)}
+                    {isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="w-4 h-4" /> Enregistrer le quiz manuel</>)}
                 </Button>
              </CardContent>
            </Card>

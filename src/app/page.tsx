@@ -530,7 +530,7 @@ export default function Home() {
           
           <div className="text-center pt-8 border-t border-gray-800">
             <p className="text-gray-400">
-              © 2024 Gagne ton concours. Révolutionne ton avenir. ✨
+              © 2025 Gagne ton concours. Développe par Abdoul Aziz. ✨
             </p>
           </div>
         </div>

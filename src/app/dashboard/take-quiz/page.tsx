@@ -258,14 +258,19 @@ export default function TakeQuizPage() {
     <div className="p-4 sm:p-6 md:p-8 flex items-center justify-center min-h-[calc(100vh-100px)]">
       <Card className="w-full max-w-3xl glassmorphism shadow-2xl">
         <CardHeader>
-          <div className="flex justify-between items-center mb-2">
-            <CardTitle className="text-xl font-bold gradient-text">{quiz.title}</CardTitle>
-            <div className="flex items-center gap-2 font-bold text-purple-600 bg-purple-100 dark:bg-purple-900/50 px-3 py-1 rounded-full text-sm">
+          <div className="flex justify-between items-start mb-2 gap-4">
+             <Button variant="ghost" size="icon" className="shrink-0" onClick={() => router.back()}>
+                <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className='flex-1 text-center'>
+                <CardTitle className="text-xl font-bold gradient-text">{quiz.title}</CardTitle>
+                <CardDescription>Question {currentQuestionIndex + 1} sur {quiz.questions.length}</CardDescription>
+            </div>
+            <div className="flex items-center gap-2 font-bold text-purple-600 bg-purple-100 dark:bg-purple-900/50 px-3 py-1 rounded-full text-sm shrink-0">
               <Clock className="w-4 h-4" />
               <span>{formatTime(timeLeft)}</span>
             </div>
           </div>
-          <CardDescription>Question {currentQuestionIndex + 1} sur {quiz.questions.length}</CardDescription>
           <Progress value={progress} className="w-full mt-2" />
         </CardHeader>
         <CardContent>

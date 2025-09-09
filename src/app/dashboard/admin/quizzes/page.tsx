@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2, CalendarClock } from 'lucide-react';
+import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2, CalendarClock, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -34,6 +35,7 @@ type ManualQuestion = {
 
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
+  const router = useRouter();
 
   // AI Generator State
   const [topic, setTopic] = useState('');
@@ -237,6 +239,9 @@ export default function AdminQuizzesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
+             <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
+                <ArrowLeft className="w-5 h-5" />
+            </Button>
             <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
               <BrainCircuit className="w-6 h-6 text-white" />
             </div>
@@ -250,6 +255,10 @@ export default function AdminQuizzesPage() {
             </div>
           </div>
         </div>
+        <Button variant="outline" onClick={() => router.push('/dashboard/admin')} className="hidden sm:flex">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour à l'admin
+        </Button>
       </div>
       
       <Tabs defaultValue="ai_generator">

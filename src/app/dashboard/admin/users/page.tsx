@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, Loader, Shield, UserCheck, MoreHorizontal, Check, ChevronsUpDown } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { Users, Loader, Shield, UserCheck, MoreHorizontal, Check, ChevronsUpDown, ArrowLeft } from "lucide-react";
 import { AppUser, getUsersFromFirestore, updateUserRoleInFirestore } from '@/lib/firestore.service';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -45,6 +46,7 @@ export default function AdminUsersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -100,6 +102,9 @@ export default function AdminUsersPage() {
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
+                <ArrowLeft className="w-5 h-5" />
+            </Button>
             <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
               <Users className="w-6 h-6 text-white" />
             </div>
@@ -113,6 +118,10 @@ export default function AdminUsersPage() {
             </div>
           </div>
         </div>
+         <Button variant="outline" onClick={() => router.push('/dashboard/admin')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour à l'admin
+        </Button>
       </div>
       
       <Card className="glassmorphism shadow-xl">

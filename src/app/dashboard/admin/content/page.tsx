@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, PlusCircle, Trash2, Edit, Loader, Save } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { FileText, PlusCircle, Trash2, Edit, Loader, Save, ArrowLeft } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,6 +43,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function AdminContentPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [documents, setDocuments] = useState<LibraryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -160,6 +162,9 @@ export default function AdminContentPage() {
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
+             <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
+                <ArrowLeft className="w-5 h-5" />
+            </Button>
             <div className="w-12 h-12 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
               <FileText className="w-6 h-6 text-white" />
             </div>
@@ -173,10 +178,16 @@ export default function AdminContentPage() {
             </div>
           </div>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold shadow-lg">
-          <PlusCircle className="w-4 h-4 mr-2"/>
-          Ajouter une ressource
-        </Button>
+        <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => router.push('/dashboard/admin')} className="hidden sm:flex">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Retour
+            </Button>
+            <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold shadow-lg">
+                <PlusCircle className="w-4 h-4 mr-2"/>
+                Ajouter
+            </Button>
+        </div>
       </div>
       
        <Card className="glassmorphism shadow-xl">

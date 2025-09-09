@@ -35,10 +35,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo';
 
 const userNavItems = [
-  { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
+  { title: "Accueil", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
-  { title: "Concours Blancs", url: "/dashboard/mock-exams", icon: CalendarClock, gradient: "from-indigo-500 to-blue-500" },
-  { title: "Bibliothèque", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
+  { title: "Concours", url: "/dashboard/mock-exams", icon: CalendarClock, gradient: "from-indigo-500 to-blue-500" },
+  { title: "Ressources", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy, gradient: "from-rose-500 to-pink-500" },
 ];
 
@@ -49,10 +49,10 @@ const adminNavItems = [
 ];
 
 const mobileNavItems = [
-  { title: "Tableau de bord", url: "/dashboard", icon: BarChart3 },
+  { title: "Accueil", url: "/dashboard", icon: BarChart3 },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play },
-  { title: "Concours Blancs", url: "/dashboard/mock-exams", icon: CalendarClock },
-  { title: "Bibliothèque", url: "/dashboard/documents", icon: BookOpen },
+  { title: "Concours", url: "/dashboard/mock-exams", icon: CalendarClock },
+  { title: "Ressources", url: "/dashboard/documents", icon: BookOpen },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy },
 ];
 
@@ -127,8 +127,7 @@ export default function DashboardLayout({
 
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
-  const navItems = isAdmin ? [...userNavItems.slice(0,1), { title: "Admin", url: "/dashboard/admin", icon: Settings, gradient: "from-gray-500 to-gray-700" }, ...userNavItems.slice(1)] : userNavItems;
-  const mobileUserNav = userNavItems;
+  const desktopNavItems = isAdmin ? [...userNavItems.slice(0,1), { title: "Admin", url: "/dashboard/admin", icon: Settings, gradient: "from-gray-500 to-gray-700" }, ...userNavItems.slice(1)] : userNavItems;
 
   return (
      <div className="min-h-screen bg-background">
@@ -219,7 +218,7 @@ export default function DashboardLayout({
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1">
-                {navItems.map((item) => (
+                {desktopNavItems.map((item) => (
                   <Link key={item.title} href={item.url}>
                     <Button
                       variant="ghost"
@@ -336,7 +335,7 @@ export default function DashboardLayout({
                   <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />Navigation
                   </h3>
-                  {mobileUserNav.map((item) => (
+                  {userNavItems.map((item) => (
                     <Link key={item.title} href={item.url}>
                       <Button
                         variant="ghost"

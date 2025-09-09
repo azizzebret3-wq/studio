@@ -1,7 +1,7 @@
 // src/app/dashboard/admin/quizzes/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useReducer } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2, CalendarClock, ArrowLeft } from 'lucide-react';
+import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -24,9 +24,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
-
 type ManualQuestion = {
-  id: string; // Use string for stable key
+  id: string;
   question: string;
   options: { id: string, text: string }[];
   correctAnswers: string[];
@@ -51,6 +50,7 @@ export default function AdminQuizzesPage() {
   const [quizAccess, setQuizAccess] = useState<'gratuit' | 'premium'>('gratuit');
   const [isMockExam, setIsMockExam] = useState(false);
   const [scheduledFor, setScheduledFor] = useState('');
+  const [aiQuizCategory, setAiQuizCategory] = useState('');
 
 
   // Manual Creator State
@@ -82,7 +82,7 @@ export default function AdminQuizzesPage() {
     try {
       const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty: quizDifficulty });
       setGeneratedQuiz(result);
-      setManualQuizCategory(topic); // Pre-fill category
+      setAiQuizCategory(topic); // Pre-fill category
       toast({
         title: 'Quiz généré !',
         description: 'Votre quiz a été créé avec succès pour validation.',
@@ -109,7 +109,7 @@ export default function AdminQuizzesPage() {
     try {
       const quizDataToSave: Omit<Quiz, 'id'> = {
         ...generatedQuiz.quiz,
-        category: manualQuizCategory || topic,
+        category: aiQuizCategory || topic,
         difficulty: quizDifficulty,
         access_type: quizAccess,
         duration_minutes: numberOfQuestions * 1.5,
@@ -159,19 +159,23 @@ export default function AdminQuizzesPage() {
     setManualQuestions(prev => [...prev, newQuestion]);
   };
 
-  const removeManualQuestion = (id: string) => {
-    setManualQuestions(prev => prev.filter(q => q.id !== id));
+  const removeManualQuestion = (qId: string) => {
+    setManualQuestions(prev => prev.filter(q => q.id !== qId));
   };
   
-  const handleManualQuestionChange = (id: string, field: keyof Omit<ManualQuestion, 'id' | 'options' | 'correctAnswers'>, value: string) => {
-      setManualQuestions(prev => prev.map(q => q.id === id ? {...q, [field]: value} : q));
+  const handleManualQuestionChange = (qId: string, field: keyof Omit<ManualQuestion, 'id' | 'options' | 'correctAnswers'>, value: string) => {
+      setManualQuestions(prev => prev.map(q => q.id === qId ? {...q, [field]: value} : q));
   }
 
   const handleOptionChange = (qId: string, optId: string, text: string) => {
     setManualQuestions(prev => prev.map(q => {
         if (q.id === qId) {
             const newOptions = q.options.map(opt => opt.id === optId ? {...opt, text} : opt);
-            return {...q, options: newOptions};
+            // If an option that was a correct answer is changed, remove it from correctAnswers
+            const oldOptionText = q.options.find(opt => opt.id === optId)?.text;
+            const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== oldOptionText);
+            
+            return {...q, options: newOptions, correctAnswers: newCorrectAnswers};
         }
         return q;
     }));
@@ -196,6 +200,18 @@ export default function AdminQuizzesPage() {
         return { ...q, correctAnswers: Array.from(currentCorrect) };
       }
       return q;
+    }));
+  };
+  
+  const removeOption = (qId: string, optId: string) => {
+    setManualQuestions(prev => prev.map(q => {
+        if (q.id === qId) {
+            const removedOption = q.options.find(opt => opt.id === optId);
+            const newOptions = q.options.filter(opt => opt.id !== optId);
+            const newCorrectAnswers = removedOption ? q.correctAnswers.filter(ans => ans !== removedOption.text) : q.correctAnswers;
+            return {...q, options: newOptions, correctAnswers: newCorrectAnswers};
+        }
+        return q;
     }));
   };
 
@@ -338,7 +354,7 @@ export default function AdminQuizzesPage() {
                                     </div>
                                 </div>
 
-                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving}>
+                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving || !topic || !competitionType}>
                                     {isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération en cours... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer le Quiz </>)}
                                 </Button>
                             </form>
@@ -380,7 +396,11 @@ export default function AdminQuizzesPage() {
                                     </Accordion>
                                      <div className="space-y-4 p-4 border rounded-lg">
                                         <h3 className="font-semibold mb-2">Options de sauvegarde</h3>
-                                        <div className="grid grid-cols-1 gap-4">
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                             <div className="space-y-1.5">
+                                                  <Label htmlFor="ai_quiz_category">Catégorie</Label>
+                                                  <Input id="ai_quiz_category" placeholder="Ex: Histoire" value={aiQuizCategory} onChange={e => setAiQuizCategory(e.target.value)} />
+                                             </div>
                                             <div className="space-y-1.5">
                                                 <Label>Accès</Label>
                                                 <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue={quizAccess}>
@@ -494,25 +514,26 @@ export default function AdminQuizzesPage() {
                     </div>
                      {manualQuestions.map((q, qIndex) => (
                         <Card key={q.id} className="p-4 bg-background/50">
-                            <div className="flex justify-between items-start">
-                                <Label className="mb-2">Question {qIndex + 1}</Label>
+                            <div className="flex justify-between items-start mb-2">
+                                <Label className="font-semibold">Question {qIndex + 1}</Label>
                                 <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeManualQuestion(q.id)}><Trash2 className="w-4 h-4"/></Button>
                             </div>
                             <div className="space-y-3">
                                 <Textarea placeholder="Texte de la question" value={q.question} onChange={e => handleManualQuestionChange(q.id, 'question', e.target.value)}/>
-                                <Label className="text-xs">Options (cochez la ou les bonnes réponses)</Label>
+                                <Label className="text-xs text-muted-foreground">Options (cochez la ou les bonnes réponses)</Label>
                                 {q.options.map((opt, optIndex) => (
                                     <div key={opt.id} className="flex items-center gap-2">
                                         <Checkbox 
-                                          id={opt.id}
+                                          id={`${q.id}-${opt.id}`}
                                           checked={q.correctAnswers.includes(opt.text)}
                                           onCheckedChange={(checked) => handleCorrectAnswerChange(q.id, opt.text, Boolean(checked))}
                                           disabled={!opt.text}
                                         />
                                         <Input placeholder={`Option ${optIndex + 1}`} value={opt.text} onChange={e => handleOptionChange(q.id, opt.id, e.target.value)} />
+                                        <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(q.id, opt.id)}><Trash2 className="w-4 h-4"/></Button>
                                     </div>
                                 ))}
-                                <Button variant="outline" size="sm" onClick={() => addOption(q.id)}>Ajouter une option</Button>
+                                <Button variant="outline" size="sm" onClick={() => addOption(q.id)}><PlusCircle className="w-4 h-4 mr-2"/>Ajouter une option</Button>
                                 <Textarea placeholder="Explication de la bonne réponse (optionnel)" value={q.explanation} onChange={e => handleManualQuestionChange(q.id, 'explanation', e.target.value)} />
                             </div>
                         </Card>

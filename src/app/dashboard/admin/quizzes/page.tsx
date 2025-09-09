@@ -74,7 +74,7 @@ export default function AdminQuizzesPage() {
     setGeneratedQuiz(null);
 
     try {
-      const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty: 'moyen' });
+      const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty: quizDifficulty });
       setGeneratedQuiz(result);
       setManualQuizCategory(topic); // Pre-fill category
       toast({
@@ -106,7 +106,7 @@ export default function AdminQuizzesPage() {
         category: manualQuizCategory || topic,
         difficulty: quizDifficulty,
         access_type: quizAccess,
-        duration_minutes: numberOfQuestions * 1,
+        duration_minutes: numberOfQuestions * 1.5,
         total_questions: generatedQuiz.quiz.questions.length,
         createdAt: new Date(),
         isMockExam,
@@ -120,6 +120,8 @@ export default function AdminQuizzesPage() {
           description: 'Le quiz est maintenant disponible pour les utilisateurs.',
       });
       setGeneratedQuiz(null);
+      setTopic('');
+      setCompetitionType('');
     } catch (error) {
       console.error("Error saving quiz: ", error);
       toast({
@@ -148,33 +150,33 @@ export default function AdminQuizzesPage() {
         correctAnswers: [],
         explanation: '',
     };
-    setManualQuestions([...manualQuestions, newQuestion]);
+    setManualQuestions(prev => [...prev, newQuestion]);
   };
 
   const removeManualQuestion = (id: number) => {
-    setManualQuestions(manualQuestions.filter(q => q.id !== id));
+    setManualQuestions(prev => prev.filter(q => q.id !== id));
   };
   
   const handleManualQuestionChange = (id: number, field: keyof ManualQuestion, value: any) => {
-      setManualQuestions(manualQuestions.map(q => q.id === id ? {...q, [field]: value} : q));
+      setManualQuestions(prev => prev.map(q => q.id === id ? {...q, [field]: value} : q));
   }
 
   const handleOptionChange = (qId: number, optId: number, text: string) => {
-      setManualQuestions(manualQuestions.map(q => q.id === qId ? {
+      setManualQuestions(prev => prev.map(q => q.id === qId ? {
           ...q,
           options: q.options.map(opt => opt.id === optId ? {...opt, text} : opt)
       } : q));
   }
   
   const addOption = (qId: number) => {
-    setManualQuestions(manualQuestions.map(q => q.id === qId ? {
+    setManualQuestions(prev => prev.map(q => q.id === qId ? {
       ...q,
       options: [...q.options, { id: Date.now(), text: '' }]
     } : q));
   }
 
   const handleCorrectAnswerChange = (qId: number, optionText: string, isChecked: boolean) => {
-    setManualQuestions(manualQuestions.map(q => {
+    setManualQuestions(prev => prev.map(q => {
       if (q.id === qId) {
         const newCorrectAnswers = isChecked
           ? [...q.correctAnswers, optionText]
@@ -298,18 +300,32 @@ export default function AdminQuizzesPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="numberOfQuestions">Nombre de questions</Label>
-                                    <Input
-                                        id="numberOfQuestions"
-                                        type="number"
-                                        value={numberOfQuestions}
-                                        onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10))}
-                                        min="1"
-                                        max="50"
-                                        disabled={isLoading || isSaving}
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="numberOfQuestions">N. Questions</Label>
+                                        <Input
+                                            id="numberOfQuestions"
+                                            type="number"
+                                            value={numberOfQuestions}
+                                            onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10))}
+                                            min="1"
+                                            max="50"
+                                            disabled={isLoading || isSaving}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="difficulty">Difficulté</Label>
+                                        <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue={quizDifficulty} disabled={isLoading || isSaving}>
+                                            <SelectTrigger id="difficulty"><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="facile">Facile</SelectItem>
+                                                <SelectItem value="moyen">Moyen</SelectItem>
+                                                <SelectItem value="difficile">Difficile</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
+
                                 <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving}>
                                     {isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération en cours... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer le Quiz </>)}
                                 </Button>
@@ -352,21 +368,10 @@ export default function AdminQuizzesPage() {
                                     </Accordion>
                                      <div className="space-y-4 p-4 border rounded-lg">
                                         <h3 className="font-semibold mb-2">Options de sauvegarde</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label>Difficulté</Label>
-                                                <Select onValueChange={(v) => setQuizDifficulty(v as any)} defaultValue="moyen">
-                                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="facile">Facile</SelectItem>
-                                                        <SelectItem value="moyen">Moyen</SelectItem>
-                                                        <SelectItem value="difficile">Difficile</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                        <div className="grid grid-cols-1 gap-4">
                                             <div className="space-y-1.5">
                                                 <Label>Accès</Label>
-                                                <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue="gratuit">
+                                                <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue={quizAccess}>
                                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="gratuit">Gratuit</SelectItem>

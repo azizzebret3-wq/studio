@@ -39,7 +39,7 @@ const manualQuizSchema = z.object({
   title: z.string().min(1, 'Le titre est requis.'),
   description: z.string().min(1, 'La description est requise.'),
   category: z.string().min(1, 'La catégorie est requise.'),
-  duration: z.number().min(1, 'La durée doit être d\'au moins 1 minute.'),
+  duration: z.coerce.number().min(1, 'La durée doit être d\'au moins 1 minute.'),
   difficulty: z.enum(['facile', 'moyen', 'difficile']),
   access: z.enum(['gratuit', 'premium']),
   isMockExam: z.boolean(),
@@ -58,23 +58,28 @@ export default function AdminQuizzesPage() {
   const router = useRouter();
 
   // AI Generator State
-  const [topic, setTopic] = useState('');
-  const [competitionType, setCompetitionType] = useState('');
-  const [numberOfQuestions, setNumberOfQuestions] = useState(10);
-  const [quizDifficulty, setQuizDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
+  const [aiForm, setAiForm] = useState({
+      topic: '',
+      competitionType: '',
+      numberOfQuestions: 10,
+      difficulty: 'moyen' as 'facile' | 'moyen' | 'difficile',
+  });
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
   
   // AI Save Options State
-  const [quizAccess, setQuizAccess] = useState<'gratuit' | 'premium'>('gratuit');
-  const [isMockExam, setIsMockExam] = useState(false);
-  const [scheduledFor, setScheduledFor] = useState('');
-  const [aiQuizCategory, setAiQuizCategory] = useState('');
+   const [saveOptions, setSaveOptions] = useState({
+    access: 'gratuit' as 'gratuit' | 'premium',
+    isMockExam: false,
+    scheduledFor: '',
+    category: '',
+  });
+
 
   // Manual Form setup with react-hook-form
-    const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<ManualQuizFormValues>({
+    const { register, control, handleSubmit, watch, formState: { errors } } = useForm<ManualQuizFormValues>({
         resolver: zodResolver(manualQuizSchema),
         defaultValues: {
             title: '',
@@ -99,7 +104,7 @@ export default function AdminQuizzesPage() {
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic || !competitionType) {
+    if (!aiForm.topic || !aiForm.competitionType) {
       toast({
         variant: 'destructive',
         title: 'Champs manquants',
@@ -112,9 +117,14 @@ export default function AdminQuizzesPage() {
     setGeneratedQuiz(null);
 
     try {
-      const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty: quizDifficulty });
+      const result = await generateQuiz({ 
+          topic: aiForm.topic, 
+          competitionType: aiForm.competitionType, 
+          numberOfQuestions: aiForm.numberOfQuestions, 
+          difficulty: aiForm.difficulty 
+      });
       setGeneratedQuiz(result);
-      setAiQuizCategory(topic); // Pre-fill category
+      setSaveOptions(prev => ({...prev, category: aiForm.topic})); // Pre-fill category
       toast({
         title: 'Quiz généré !',
         description: 'Votre quiz a été créé avec succès pour validation.',
@@ -133,7 +143,7 @@ export default function AdminQuizzesPage() {
   
   const handleSaveAiQuiz = async () => {
     if (!generatedQuiz) return;
-     if (isMockExam && !scheduledFor) {
+     if (saveOptions.isMockExam && !saveOptions.scheduledFor) {
       toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez définir une date pour le concours blanc.' });
       return;
     }
@@ -141,15 +151,18 @@ export default function AdminQuizzesPage() {
     try {
       const quizDataToSave: Omit<Quiz, 'id'> = {
         ...generatedQuiz.quiz,
-        category: aiQuizCategory || topic,
-        difficulty: quizDifficulty,
-        access_type: quizAccess,
-        duration_minutes: numberOfQuestions * 1.5,
+        category: saveOptions.category || aiForm.topic,
+        difficulty: aiForm.difficulty,
+        access_type: saveOptions.access,
+        duration_minutes: aiForm.numberOfQuestions * 1.5,
         total_questions: generatedQuiz.quiz.questions.length,
         createdAt: new Date(),
-        isMockExam,
-        ...(isMockExam && scheduledFor && { scheduledFor: new Date(scheduledFor) }),
+        isMockExam: saveOptions.isMockExam,
       };
+
+      if (saveOptions.isMockExam && saveOptions.scheduledFor) {
+        quizDataToSave.scheduledFor = new Date(saveOptions.scheduledFor);
+      }
       
       await saveQuizToFirestore(quizDataToSave);
 
@@ -158,8 +171,8 @@ export default function AdminQuizzesPage() {
           description: 'Le quiz est maintenant disponible pour les utilisateurs.',
       });
       setGeneratedQuiz(null);
-      setTopic('');
-      setCompetitionType('');
+      setAiForm(prev => ({...prev, topic: '', competitionType: ''}));
+
     } catch (error) {
       console.error("Error saving quiz: ", error);
       toast({
@@ -199,8 +212,11 @@ export default function AdminQuizzesPage() {
                 correctAnswers: q.correctAnswers,
                 explanation: q.explanation
             })),
-            ...(data.isMockExam && data.scheduledFor && { scheduledFor: new Date(data.scheduledFor) }),
         };
+        if (data.isMockExam && data.scheduledFor) {
+           manualQuizToSave.scheduledFor = new Date(data.scheduledFor);
+        }
+
         await saveQuizToFirestore(manualQuizToSave);
          toast({
             title: 'Quiz Sauvegardé !',
@@ -267,14 +283,18 @@ export default function AdminQuizzesPage() {
                                     <Input
                                         id="topic"
                                         placeholder="Ex: Histoire du Burkina Faso"
-                                        value={topic}
-                                        onChange={(e) => setTopic(e.target.value)}
+                                        value={aiForm.topic}
+                                        onChange={(e) => setAiForm(prev => ({...prev, topic: e.target.value}))}
                                         disabled={isLoading || isSaving}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="competitionType">Type de concours</Label>
-                                    <Select onValueChange={setCompetitionType} value={competitionType} disabled={isLoading || isSaving}>
+                                    <Select 
+                                      onValueChange={(value) => setAiForm(prev => ({...prev, competitionType: value}))} 
+                                      value={aiForm.competitionType} 
+                                      disabled={isLoading || isSaving}
+                                    >
                                         <SelectTrigger id="competitionType">
                                         <SelectValue placeholder="Sélectionner un type" />
                                         </SelectTrigger>
@@ -290,8 +310,8 @@ export default function AdminQuizzesPage() {
                                         <Input
                                             id="numberOfQuestions"
                                             type="number"
-                                            value={numberOfQuestions}
-                                            onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10) || 1)}
+                                            value={aiForm.numberOfQuestions}
+                                            onChange={(e) => setAiForm(prev => ({...prev, numberOfQuestions: parseInt(e.target.value, 10) || 1}))}
                                             min="1"
                                             max="50"
                                             disabled={isLoading || isSaving}
@@ -299,7 +319,11 @@ export default function AdminQuizzesPage() {
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="difficulty">Difficulté</Label>
-                                        <Select onValueChange={(v) => setQuizDifficulty(v as any)} value={quizDifficulty} disabled={isLoading || isSaving}>
+                                        <Select 
+                                          onValueChange={(v: 'facile' | 'moyen' | 'difficile') => setAiForm(prev => ({...prev, difficulty: v}))} 
+                                          value={aiForm.difficulty} 
+                                          disabled={isLoading || isSaving}
+                                        >
                                             <SelectTrigger id="difficulty"><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="facile">Facile</SelectItem>
@@ -310,7 +334,7 @@ export default function AdminQuizzesPage() {
                                     </div>
                                 </div>
 
-                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving || !topic || !competitionType}>
+                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={isLoading || isSaving || !aiForm.topic || !aiForm.competitionType}>
                                     {isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération en cours... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer le Quiz </>)}
                                 </Button>
                             </form>
@@ -355,11 +379,11 @@ export default function AdminQuizzesPage() {
                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                              <div className="space-y-1.5">
                                                   <Label htmlFor="ai_quiz_category">Catégorie</Label>
-                                                  <Input id="ai_quiz_category" placeholder="Ex: Histoire" value={aiQuizCategory} onChange={e => setAiQuizCategory(e.target.value)} />
+                                                  <Input id="ai_quiz_category" placeholder="Ex: Histoire" value={saveOptions.category} onChange={e => setSaveOptions(prev => ({...prev, category: e.target.value}))} />
                                              </div>
                                             <div className="space-y-1.5">
                                                 <Label>Accès</Label>
-                                                <Select onValueChange={(v) => setQuizAccess(v as any)} defaultValue={quizAccess}>
+                                                <Select onValueChange={(v: 'gratuit' | 'premium') => setSaveOptions(prev => ({...prev, access: v}))} defaultValue={saveOptions.access}>
                                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="gratuit">Gratuit</SelectItem>
@@ -369,13 +393,13 @@ export default function AdminQuizzesPage() {
                                             </div>
                                         </div>
                                          <div className="flex items-center space-x-2 pt-4">
-                                            <Switch id="mock-exam-switch" checked={isMockExam} onCheckedChange={setIsMockExam} />
+                                            <Switch id="mock-exam-switch" checked={saveOptions.isMockExam} onCheckedChange={checked => setSaveOptions(prev => ({...prev, isMockExam: checked}))} />
                                             <Label htmlFor="mock-exam-switch">Définir comme Concours Blanc</Label>
                                         </div>
-                                        {isMockExam && (
+                                        {saveOptions.isMockExam && (
                                             <div className="space-y-1.5">
                                                 <Label htmlFor="scheduledFor">Date et heure de début</Label>
-                                                <Input id="scheduledFor" type="datetime-local" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} />
+                                                <Input id="scheduledFor" type="datetime-local" value={saveOptions.scheduledFor} onChange={e => setSaveOptions(prev => ({...prev, scheduledFor: e.target.value}))} />
                                             </div>
                                         )}
                                      </div>
@@ -464,7 +488,7 @@ export default function AdminQuizzesPage() {
                             />
                             <div className="space-y-1.5">
                                 <Label htmlFor="manual_duration">Durée (minutes)</Label>
-                                <Input id="manual_duration" type="number" {...register("duration", { valueAsNumber: true })} />
+                                <Input id="manual_duration" type="number" {...register("duration")} />
                                 {errors.duration && <p className="text-sm text-red-500">{errors.duration.message}</p>}
                             </div>
                         </div>
@@ -490,7 +514,7 @@ export default function AdminQuizzesPage() {
                     <div className="border-t pt-6 space-y-4">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Questions</h3>
-                            <Button type="button" variant="outline" size="sm" onClick={() => appendQuestion({ question: '', options: [{ text: '' }, { text: '' }], correctAnswers: [] })}><PlusCircle className="w-4 h-4 mr-2" />Ajouter une question</Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => appendQuestion({ question: '', options: [{ text: '' }, { text: '' }], correctAnswers: [], explanation: '' })}><PlusCircle className="w-4 h-4 mr-2" />Ajouter une question</Button>
                         </div>
                          {errors.questions?.root && <p className="text-sm text-red-500">{errors.questions.root.message}</p>}
 
@@ -535,7 +559,7 @@ export default function AdminQuizzesPage() {
                                                 <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)}><Trash2 className="w-4 h-4"/></Button>
                                             </div>
                                         ))}
-                                        {errors.questions?.[qIndex]?.options && <p className="text-sm text-red-500">Veuillez remplir toutes les options.</p>}
+                                        {errors.questions?.[qIndex]?.options?.root && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.options?.root?.message}</p>}
                                         
                                         <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ text: '' })}><PlusCircle className="w-4 h-4 mr-2"/>Ajouter une option</Button>
                                         <Textarea placeholder="Explication de la bonne réponse (optionnel)" {...register(`questions.${qIndex}.explanation`)} />

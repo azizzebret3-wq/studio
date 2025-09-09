@@ -24,6 +24,7 @@ import {
   Moon,
   Sun,
   CalendarClock,
+  UserCircle,
 } from 'lucide-react';
 import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,13 @@ const adminNavItems = [
   { title: "Gérer Contenu", url: "/dashboard/admin/content", icon: FileText, gradient: "from-rose-500 to-pink-500" },
   { title: "Gérer Users", url: "/dashboard/admin/users", icon: Users, gradient: "from-amber-500 to-orange-500" },
 ];
+
+const mobileNavItems = [
+  { title: "Tableau de bord", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
+  { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
+  { title: "Concours Blancs", url: "/dashboard/mock-exams", icon: CalendarClock, gradient: "from-indigo-500 to-blue-500" },
+  { title: "Profil", url: "/dashboard/profile", icon: UserCircle, gradient: "from-gray-500 to-gray-700" },
+]
 
 export default function DashboardLayout({
   children,
@@ -410,9 +418,9 @@ export default function DashboardLayout({
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
-             <div className="grid grid-cols-5 gap-1 p-2">
-                 {userNavItems.map((item) => (
-                     <Link key={item.title} href={item.url} className={item.title === 'Formations' ? 'hidden' : ''}>
+             <div className="grid grid-cols-4 gap-1 p-2">
+                 {mobileNavItems.map((item) => (
+                     <Link key={item.title} href={item.url}>
                          <Button
                              variant="ghost"
                              className={`flex flex-col gap-1 h-auto py-2 px-1 rounded-xl font-medium text-xs transition-all w-full ${

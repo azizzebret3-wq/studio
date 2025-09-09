@@ -19,7 +19,9 @@ import {
   Flame,
   Sparkles,
   Rocket,
-  Loader
+  Loader,
+  FileText,
+  Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,14 +29,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { getQuizzesFromFirestore, Quiz, getAttemptsFromFirestore, Attempt } from "@/lib/firestore.service";
+import { getQuizzesFromFirestore, Quiz, getAttemptsFromFirestore, Attempt, getDocumentsFromFirestore, LibraryDocument } from "@/lib/firestore.service";
 import { useToast } from "@/hooks/use-toast";
-
-const mockContents = [
-    { id: 'c1', title: 'Résumé de la Constitution', type: 'pdf', access_type: 'gratuit' },
-    { id: 'c2', title: 'Vidéo : Résoudre les tests psychotechniques', type: 'video', access_type: 'premium', duration: '45 min' },
-    { id: 'c3', title: 'Annales du concours ENA 2023', type: 'pdf', access_type: 'premium' },
-];
 
 
 export default function Dashboard() {
@@ -43,7 +39,7 @@ export default function Dashboard() {
   
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [recentAttempts, setRecentAttempts] = useState<Attempt[]>([]);
-  const [contents] = useState(mockContents);
+  const [latestContent, setLatestContent] = useState<LibraryDocument[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   
   const [stats, setStats] = useState({
@@ -58,15 +54,19 @@ export default function Dashboard() {
       if (!user) return;
       setLoadingData(true);
       try {
-        const fetchedQuizzes = await getQuizzesFromFirestore();
-        setQuizzes(fetchedQuizzes);
+        const [fetchedQuizzes, fetchedDocuments] = await Promise.all([
+          getQuizzesFromFirestore(),
+          getDocumentsFromFirestore(),
+        ]);
+        
+        setQuizzes(fetchedQuizzes.filter(q => !q.isMockExam));
+        setLatestContent(fetchedDocuments.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0,3));
         
         try {
           const fetchedAttempts = await getAttemptsFromFirestore(user.uid);
           setRecentAttempts(fetchedAttempts);
         } catch (attemptsError) {
           console.error("Could not fetch attempts, maybe index is building?", attemptsError);
-          // Don't toast here, just show an empty state for attempts
           setRecentAttempts([]); 
         }
 
@@ -367,32 +367,35 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-               {contents.length === 0 ? (
+               {latestContent.length === 0 ? (
                  <div className="text-center py-6">
                   <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground font-medium text-sm">Aucun contenu</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {contents.slice(0, 3).map((content) => (
-                    <div key={content.id} className="group p-3 border border-border/50 rounded-lg hover:bg-accent/50 cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 ${
-                          content.type === 'pdf' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
-                          'bg-gradient-to-r from-blue-500 to-cyan-500'
-                        }`}>
-                          <BookOpen className="w-4 h-4 text-white" />
+                  {latestContent.map((content) => (
+                     <Link key={content.id} href={content.url} target="_blank" rel="noopener noreferrer" className="group block">
+                        <div className="p-3 border border-border/50 rounded-lg hover:bg-accent/50 cursor-pointer">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 ${
+                            content.type === 'pdf' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 
+                            'bg-gradient-to-r from-blue-500 to-cyan-500'
+                            }`}>
+                            {content.type === 'pdf' ? <FileText className="w-4 h-4 text-white" /> : <Video className="w-4 h-4 text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-foreground truncate group-hover:text-purple-600">
+                                {content.title}
+                            </p>
+                            <Badge variant="outline" className="text-xs capitalize mt-1">
+                                {content.type}
+                                </Badge>
+                            </div>
+                             {content.access_type === 'premium' && <Crown className="w-4 h-4 text-yellow-500" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-foreground truncate group-hover:text-purple-600">
-                            {content.title}
-                          </p>
-                           <Badge variant="outline" className="text-xs capitalize mt-1">
-                              {content.type}
-                            </Badge>
                         </div>
-                      </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

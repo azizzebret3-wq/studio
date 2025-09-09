@@ -2,13 +2,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Crown, UserCircle, Edit, Save, Camera, Loader } from 'lucide-react';
+import { Crown, UserCircle, Edit, Save, Camera, Loader, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -16,6 +17,7 @@ import { getAuth, updateProfile } from 'firebase/auth';
 
 export default function ProfilePage() {
   const { user, userData, loading, reloadUserData } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   
   const [fullName, setFullName] = useState('');
@@ -90,6 +92,9 @@ export default function ProfilePage() {
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
+             <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
+                <ArrowLeft className="w-5 h-5" />
+            </Button>
             <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center shadow-lg">
               <UserCircle className="w-6 h-6 text-white" />
             </div>

@@ -74,38 +74,30 @@ export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
   }
 };
 
+const parseFirestoreDate = (dateField: any): Date => {
+  if (dateField instanceof Timestamp) {
+    return dateField.toDate();
+  }
+  if (dateField && typeof dateField.seconds === 'number') {
+    return new Timestamp(dateField.seconds, dateField.nanoseconds).toDate();
+  }
+  if (dateField) {
+    return new Date(dateField);
+  }
+  return new Date(); // Fallback
+}
+
+
 export const getQuizzesFromFirestore = async (): Promise<Quiz[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, "quizzes"));
         const quizzes = querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
-            
-            let createdAt: Date;
-            if (data.createdAt instanceof Timestamp) {
-                createdAt = data.createdAt.toDate();
-            } else if (data.createdAt && typeof data.createdAt.seconds === 'number') {
-                createdAt = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
-            } else if (data.createdAt) {
-                createdAt = new Date(data.createdAt);
-            } else {
-                createdAt = new Date();
-            }
-            
-            let scheduledFor: Date | undefined;
-             if (data.scheduledFor instanceof Timestamp) {
-                scheduledFor = data.scheduledFor.toDate();
-            } else if (data.scheduledFor && typeof data.scheduledFor.seconds === 'number') {
-                scheduledFor = new Timestamp(data.scheduledFor.seconds, data.scheduledFor.nanoseconds).toDate();
-            } else if (data.scheduledFor) {
-                scheduledFor = new Date(data.scheduledFor);
-            }
-
-
             return {
                 id: doc.id,
                 ...data,
-                createdAt,
-                scheduledFor,
+                createdAt: parseFirestoreDate(data.createdAt),
+                scheduledFor: data.scheduledFor ? parseFirestoreDate(data.scheduledFor) : undefined,
             } as Quiz;
         });
         return quizzes;
@@ -120,16 +112,10 @@ export const getUsersFromFirestore = async (): Promise<AppUser[]> => {
         const querySnapshot = await getDocs(collection(db, "users"));
         return querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
-             let createdAt: Date;
-            if (data.createdAt instanceof Timestamp) {
-                createdAt = data.createdAt.toDate();
-            } else {
-                createdAt = new Date();
-            }
             return {
                 ...data,
                 uid: doc.id,
-                createdAt,
+                createdAt: parseFirestoreDate(data.createdAt),
             } as AppUser;
         });
     } catch (e) {
@@ -193,19 +179,10 @@ export const getDocumentsFromFirestore = async (): Promise<LibraryDocument[]> =>
         const querySnapshot = await getDocs(collection(db, "documents"));
         return querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
             const data = doc.data();
-             let createdAt: Date;
-            if (data.createdAt instanceof Timestamp) {
-                createdAt = data.createdAt.toDate();
-            } else if(data.createdAt?.seconds) {
-                createdAt = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
-            }
-             else {
-                createdAt = new Date();
-            }
             return {
                 id: doc.id,
                 ...data,
-                createdAt,
+                createdAt: parseFirestoreDate(data.createdAt),
             } as LibraryDocument;
         });
     } catch (e) {

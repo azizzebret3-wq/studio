@@ -30,6 +30,11 @@ import { Logo } from "@/components/logo";
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -37,8 +42,7 @@ export default function Home() {
     }
   }, [user, loading, router]);
   
-
-  if (loading || user) {
+  if (loading || !isClient || user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
         <div className="relative">
@@ -83,25 +87,25 @@ export default function Home() {
 
   const testimonials = [
     {
-      name: "Adel, admis à 4 concours",
-      role: "Lauréat de la fonction publique",
+      name: "Lauréat de la fonction publique",
+      role: "Concours direct",
       text: "Grâce aux quiz interactifs et au suivi personnalisé, j'ai pu identifier mes lacunes et m'améliorer rapidement. Les animations rendent l'apprentissage amusant !",
       rating: 5,
-      avatar: "https://picsum.photos/60/60?random=1"
+      avatar: "https://picsum.photos/60/60?random=4"
     },
     {
-      name: "Fatima, candidate",
+      name: "Candidate",
       role: "Concours professionnel",
       text: "La qualité des contenus et l'interface moderne ont transformé ma préparation en expérience immersive. Les formations vidéo sont exceptionnelles !",
       rating: 5,
-      avatar: "https://picsum.photos/60/60?random=2"
+      avatar: "https://picsum.photos/60/60?random=5"
     },
     {
-      name: "Moussa, étudiant",
+      name: "Étudiant",
       role: "Concours direct",
       text: "Le système de badges et de progression m'a motivée tout au long de ma préparation. J'ai gagné 40 points en moyenne !",
       rating: 5,
-      avatar: "https://picsum.photos/60/60?random=3"
+      avatar: "https://picsum.photos/60/60?random=6"
     }
   ];
 

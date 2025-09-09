@@ -75,16 +75,16 @@ export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
 };
 
 const parseFirestoreDate = (dateField: any): Date => {
+  if (!dateField) return new Date(); // Fallback to now if null/undefined
   if (dateField instanceof Timestamp) {
     return dateField.toDate();
   }
-  if (dateField && typeof dateField.seconds === 'number') {
+  // This handles the case where the data is serialized from server components
+  if (dateField.seconds) {
     return new Timestamp(dateField.seconds, dateField.nanoseconds).toDate();
   }
-  if (dateField) {
-    return new Date(dateField);
-  }
-  return new Date(); // Fallback
+  // This handles cases where it might already be a Date object or a string
+  return new Date(dateField);
 }
 
 
@@ -164,7 +164,7 @@ export const getAttemptsFromFirestore = async (userId: string): Promise<Attempt[
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt.toDate(),
+                createdAt: parseFirestoreDate(data.createdAt),
             } as Attempt;
         });
     } catch (e) {

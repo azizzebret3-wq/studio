@@ -30,11 +30,12 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [competitionType, setCompetitionType] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -42,6 +43,17 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (password !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas.",
+      });
+      setLoading(false);
+      return;
+    }
+
     if (!competitionType) {
       toast({
         variant: "destructive",
@@ -52,6 +64,8 @@ export default function SignupPage() {
       return;
     }
     try {
+      // Use phone number to create a dummy email for Firebase Auth
+      const email = `${phone}@gagnetonconcours.app`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -61,8 +75,8 @@ export default function SignupPage() {
       const querySnapshot = await getDocs(q);
       
       let userRole = 'user';
+      // If there's only 1 user doc, it's the one we are creating. So if length is 0, it's the first.
       if (querySnapshot.docs.length === 0) {
-        // No users exist, this is the first one, make them admin.
         userRole = 'admin';
         toast({
             title: "Super-utilisateur activé !",
@@ -74,7 +88,7 @@ export default function SignupPage() {
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         fullName,
-        email,
+        email: user.email, // Store the dummy email
         phone,
         competitionType,
         createdAt: new Date(),
@@ -91,9 +105,11 @@ export default function SignupPage() {
       console.error(error);
       let errorMessage = "Une erreur est survenue lors de la création du compte.";
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "Cette adresse e-mail est déjà utilisée."
+        errorMessage = "Ce numéro de téléphone est déjà utilisé."
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Le mot de passe doit contenir au moins 6 caractères."
+      } else if (error.code === 'auth/invalid-email') {
+         errorMessage = "Le format du numéro de téléphone est invalide."
       }
       toast({
         variant: "destructive",
@@ -147,18 +163,6 @@ export default function SignupPage() {
                 />
               </div>
               <div className="grid gap-2 md:col-span-2">
-                <Label htmlFor="email" className="font-semibold text-gray-700">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="nom@exemple.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="rounded-xl h-12"
-                />
-              </div>
-               <div className="grid gap-2 md:col-span-2">
                 <Label htmlFor="competition-type" className="font-semibold text-gray-700">Type de concours</Label>
                 <Select required onValueChange={setCompetitionType} value={competitionType}>
                   <SelectTrigger id="competition-type" className="rounded-xl h-12">
@@ -170,7 +174,7 @@ export default function SignupPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2 md:col-span-2">
+              <div className="grid gap-2">
                 <Label htmlFor="password" className="font-semibold text-gray-700">Mot de passe</Label>
                 <div className="relative">
                   <Input 
@@ -189,6 +193,28 @@ export default function SignupPage() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="confirm-password" className="font-semibold text-gray-700">Confirmer mot de passe</Label>
+                <div className="relative">
+                  <Input 
+                    id="confirm-password" 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    required 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="rounded-xl h-12"
+                  />
+                   <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-500 hover:text-gray-800"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </Button>
                 </div>
               </div>

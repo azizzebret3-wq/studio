@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -32,6 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const email = `${phone}@gagnetonconcours.app`;
       await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: "Connexion réussie",
@@ -43,7 +44,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Erreur de connexion",
-        description: "Email ou mot de passe incorrect.",
+        description: "Numéro de téléphone ou mot de passe incorrect.",
       });
     } finally {
       setLoading(false);
@@ -68,14 +69,14 @@ export default function LoginPage() {
           <CardContent className="p-8">
             <form className="grid gap-6" onSubmit={handleLogin}>
               <div className="grid gap-2">
-                <Label htmlFor="email" className="font-semibold text-gray-700">Email</Label>
+                <Label htmlFor="phone" className="font-semibold text-gray-700">Numéro de téléphone</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="nom@exemple.com"
+                  id="phone"
+                  type="tel"
+                  placeholder="+226 XX XX XX XX"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="rounded-xl h-12"
                 />
               </div>

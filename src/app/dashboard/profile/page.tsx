@@ -127,7 +127,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1 text-center sm:text-left">
               <CardTitle className="text-2xl font-bold">{userData?.fullName}</CardTitle>
-              <CardDescription className="text-gray-600 font-medium">{userData?.email}</CardDescription>
+              <CardDescription className="text-gray-600 font-medium">{userData?.phone}</CardDescription>
                {isPremium && (
                   <Badge className="mt-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 font-bold shadow-lg px-3 py-1 text-xs">
                     <Crown className="w-3 h-3 mr-1.5" />
@@ -151,10 +151,6 @@ export default function ProfilePage() {
                 <Label htmlFor="phone" className="font-semibold text-gray-700">Téléphone</Label>
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!isEditing || isSaving} className="h-11 rounded-lg" />
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="font-semibold text-gray-700">Email</Label>
-              <Input id="email" value={userData?.email || ''} disabled className="h-11 rounded-lg bg-gray-100 dark:bg-gray-800" />
             </div>
              <div className="space-y-1.5">
               <Label htmlFor="competitionType" className="font-semibold text-gray-700">Type de Concours</Label>

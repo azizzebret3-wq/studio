@@ -141,7 +141,7 @@ export default function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden sm:table-cell">Téléphone</TableHead>
                   <TableHead>Rôle</TableHead>
                   <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
                   <TableHead>
@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
                 {users.map((user) => (
                   <TableRow key={user.uid}>
                     <TableCell className="font-medium">{user.fullName || 'N/A'}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{user.phone}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>
                         {user.role === 'admin' ? <Shield className="mr-1 h-3 w-3"/> : <UserCheck className="mr-1 h-3 w-3"/>}

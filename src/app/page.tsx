@@ -1,4 +1,4 @@
-
+// src/app/page.tsx
 'use client';
 
 import React, { useState, useEffect } from "react";
@@ -37,10 +37,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (isClient && !loading && user) {
       router.push("/dashboard");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isClient]);
   
   if (loading || !isClient || user) {
     return (

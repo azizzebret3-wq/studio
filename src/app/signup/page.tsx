@@ -71,12 +71,12 @@ export default function SignupPage() {
 
       // Check if this is the first user
       const usersCollectionRef = collection(db, "users");
-      const q = query(usersCollectionRef, limit(1));
+      const q = query(usersCollectionRef, limit(2)); // Check if more than 1 user exists
       const querySnapshot = await getDocs(q);
       
       let userRole = 'user';
-      // If there's only 1 user doc, it's the one we are creating. So if length is 0, it's the first.
-      if (querySnapshot.docs.length === 0) {
+      // If there's only 1 user doc (the one we just created), it's the first.
+      if (querySnapshot.docs.length <= 1) {
         userRole = 'admin';
         toast({
             title: "Super-utilisateur activé !",

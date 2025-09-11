@@ -3,14 +3,25 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// COLLEZ VOTRE NOUVEL OBJET firebaseConfig ICI
+// Exemple:
+// const firebaseConfig = {
+//   apiKey: "AIza...",
+//   authDomain: "...",
+//   projectId: "...",
+//   storageBucket: "...",
+//   messagingSenderId: "...",
+//   appId: "..."
+// };
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  apiKey: "VOTRE_NOUVELLE_CLE_API",
+  authDomain: "VOTRE_NOUVEAU_AUTH_DOMAIN",
+  projectId: "VOTRE_PROJECT_ID",
+  storageBucket: "VOTRE_STORAGE_BUCKET",
+  messagingSenderId: "VOTRE_MESSAGING_SENDER_ID",
+  appId: "VOTRE_APP_ID"
 };
+
 
 // Initialiser Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

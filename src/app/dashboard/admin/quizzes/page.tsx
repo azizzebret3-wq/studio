@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -72,17 +72,13 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
       control,
       name: `questions.${qIndex}.options`
     });
-  
-    const { fields: correctFields, update: updateCorrect } = useFieldArray({
-        control,
-        name: `questions.${qIndex}.correctAnswers`
-    });
 
-    const optionsWatch = watch(`questions.${qIndex}.options`);
+    const optionsWatch = useWatch({ control, name: `questions.${qIndex}.options` });
+    const correctAnswersWatch = useWatch({ control, name: `questions.${qIndex}.correctAnswers` });
 
     const handleCorrectAnswerChange = (optionValue: string, isChecked: boolean) => {
-        const currentCorrectAnswers = control.getValues(`questions.${qIndex}.correctAnswers`) || [];
-        let newCorrectAnswers;
+        const currentCorrectAnswers: string[] = control.getValues(`questions.${qIndex}.correctAnswers`) || [];
+        let newCorrectAnswers: string[];
         if(isChecked) {
             newCorrectAnswers = [...currentCorrectAnswers, optionValue];
         } else {
@@ -109,17 +105,12 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
                 
                 {fields.map((field, optIndex) => (
                     <div key={field.id} className="flex items-center gap-2">
-                         <Controller
-                            name={`questions.${qIndex}.correctAnswers`}
-                            control={control}
-                            render={({ field: { value: correctAnswersValue = [] } }) => (
-                                <Checkbox
-                                    checked={correctAnswersValue.includes(optionsWatch[optIndex])}
-                                    onCheckedChange={(checked) => {
-                                        handleCorrectAnswerChange(optionsWatch[optIndex], !!checked);
-                                    }}
-                                />
-                            )}
+                         <Checkbox
+                            id={`correct-answer-${qIndex}-${optIndex}`}
+                            checked={(correctAnswersWatch || []).includes(optionsWatch?.[optIndex])}
+                            onCheckedChange={(checked) => {
+                                handleCorrectAnswerChange(optionsWatch[optIndex], !!checked);
+                            }}
                         />
                         <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
                         <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
@@ -541,7 +532,7 @@ export default function AdminQuizzesPage() {
                                      <AccordionContent>
                                          <div className="space-y-4 p-1">
                                              {questions.map((question, qIndex) => (
-                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} register={register} errors={errors} removeQuestion={removeQuestion} watch={watch} />
+                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} register={register} errors={errors} removeQuestion={removeQuestion} />
                                              ))}
                                               <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}>
                                                 <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question

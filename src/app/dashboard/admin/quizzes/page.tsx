@@ -68,11 +68,75 @@ const quizFormSchema = z.object({
 
 type QuizFormValues = z.infer<typeof quizFormSchema>;
 
+// This component is defined outside to prevent re-creation on every render.
+const QuestionEditor = ({ qIndex, control, register, errors, isSubmitting, removeQuestion, watch }: any) => {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `questions.${qIndex}.options`
+  });
+
+  const questionWatch = watch(`questions.${qIndex}`);
+
+  return (
+      <Card className="p-4 bg-background/50">
+        <div className="flex justify-between items-start mb-2">
+          <Label className="font-semibold">Question {qIndex + 1}</Label>
+          <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeQuestion(qIndex)} disabled={isSubmitting}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="space-y-3">
+          <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} disabled={isSubmitting} />
+          {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
+          
+          <Label className="text-xs text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
+          {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
+
+          {fields.map((field, optIndex) => (
+            <div key={field.id} className="flex items-center gap-2">
+              <Controller
+                control={control}
+                name={`questions.${qIndex}.correctAnswers`}
+                defaultValue={questionWatch.correctAnswers || []}
+                render={({ field: correctAnswersField }) => (
+                  <Checkbox
+                    checked={correctAnswersField.value?.includes(questionWatch.options[optIndex])}
+                    onCheckedChange={(checked) => {
+                      const optionValue = questionWatch.options[optIndex];
+                      const currentCorrectAnswers = correctAnswersField.value || [];
+                      const newCorrectAnswers = checked
+                        ? [...currentCorrectAnswers, optionValue]
+                        : currentCorrectAnswers.filter((value) => value !== optionValue);
+                      correctAnswersField.onChange(newCorrectAnswers);
+                    }}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+              <Input 
+                placeholder={`Option ${optIndex + 1}`} 
+                {...register(`questions.${qIndex}.options.${optIndex}`)}
+                disabled={isSubmitting}
+              />
+              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={isSubmitting}>
+                  <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => append('')} disabled={isSubmitting}>
+            <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
+          </Button>
+          
+          <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} disabled={isSubmitting}/>
+        </div>
+      </Card>
+  );
+};
+
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // AI Generator State
   const [generatorState, setGeneratorState] = useState({
     topic: '',
     competitionType: '',
@@ -83,7 +147,6 @@ export default function AdminQuizzesPage() {
 
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
   
-  // Quiz list state
   const [allQuizzes, setAllQuizzes] = useState<Quiz[]>([]);
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -110,7 +173,6 @@ export default function AdminQuizzesPage() {
   }, [fetchQuizzes]);
 
 
-  // Edit Form setup with react-hook-form
   const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting }, setValue } = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
        defaultValues: {
@@ -120,13 +182,12 @@ export default function AdminQuizzesPage() {
       }
   });
 
-  const { fields: questions, append: appendQuestion, remove: removeQuestion, update: updateQuestion } = useFieldArray({
+  const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
       control,
       name: "questions",
   });
     
   const watchIsMockExam = watch('isMockExam');
-  const watchQuestions = watch('questions');
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +215,7 @@ export default function AdminQuizzesPage() {
        reset({
         ...result.quiz,
         category: generatorState.topic,
-        duration_minutes: result.quiz.questions.length * 1.5,
+        duration_minutes: Math.round(result.quiz.questions.length * 1.5),
         difficulty: generatorState.difficulty,
         access_type: 'gratuit',
         isMockExam: false,
@@ -212,11 +273,12 @@ export default function AdminQuizzesPage() {
   
   const onSubmitQuiz = async (data: QuizFormValues) => {
     try {
-        const quizDataToSave: Omit<Quiz, 'id'> = {
+        const quizDataToSave = {
             ...data,
             total_questions: data.questions.length,
             createdAt: editingQuiz ? editingQuiz.createdAt : new Date(),
-            ...(data.isMockExam && data.scheduledFor && { scheduledFor: new Date(data.scheduledFor) }),
+            updatedAt: new Date(),
+            ...(data.isMockExam && data.scheduledFor ? { scheduledFor: new Date(data.scheduledFor) } : {}),
         };
 
         if (editingQuiz?.id) {
@@ -242,73 +304,6 @@ export default function AdminQuizzesPage() {
       });
     }
   }
-
-  // Component for rendering one question in the form
-  const QuestionEditor = ({ qIndex, control, isSubmitting }: {qIndex: number, control: any, isSubmitting: boolean}) => {
-    const { fields, append, remove } = useFieldArray({
-      control,
-      name: `questions.${qIndex}.options`
-    });
-
-    const removeOption = (optIndex: number) => {
-      remove(optIndex);
-    };
-
-    return (
-        <Card className="p-4 bg-background/50">
-          <div className="flex justify-between items-start mb-2">
-            <Label className="font-semibold">Question {qIndex + 1}</Label>
-            <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeQuestion(qIndex)} disabled={isSubmitting}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="space-y-3">
-            <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} disabled={isSubmitting} />
-            {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
-            
-            <Label className="text-xs text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
-            {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
-
-            {fields.map((field, optIndex) => (
-              <div key={field.id} className="flex items-center gap-2">
-                <Controller
-                  control={control}
-                  name={`questions.${qIndex}.correctAnswers`}
-                  render={({ field: correctAnswersField }) => (
-                    <Checkbox
-                      checked={correctAnswersField.value?.includes(watch(`questions.${qIndex}.options.${optIndex}`))}
-                      onCheckedChange={(checked) => {
-                        const optionValue = watch(`questions.${qIndex}.options.${optIndex}`);
-                        const currentCorrectAnswers = correctAnswersField.value || [];
-                        const newCorrectAnswers = checked
-                          ? [...currentCorrectAnswers, optionValue]
-                          : currentCorrectAnswers.filter((value) => value !== optionValue);
-                        correctAnswersField.onChange(newCorrectAnswers);
-                      }}
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-                <Input 
-                  placeholder={`Option ${optIndex + 1}`} 
-                  {...register(`questions.${qIndex}.options.${optIndex}`)}
-                  disabled={isSubmitting}
-                />
-                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)} disabled={isSubmitting}>
-                    <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append('')} disabled={isSubmitting}>
-              <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
-            </Button>
-            
-            <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} disabled={isSubmitting}/>
-          </div>
-        </Card>
-    );
-  };
-
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -412,7 +407,7 @@ export default function AdminQuizzesPage() {
                    <form onSubmit={handleSubmit(onSubmitQuiz)}>
                      <Card className="glassmorphism shadow-xl">
                         <CardHeader>
-                            <CardTitle>{editingQuiz ? 'Modifier le Quiz' : (generatedQuiz ? 'Quiz Généré' : 'Créer un Quiz Manuel')}</CardTitle>
+                            <CardTitle>{generatedQuiz ? 'Quiz Généré' : 'Créer un Quiz Manuel'}</CardTitle>
                             <CardDescription>Remplissez les détails ci-dessous. Vous pouvez aussi générer le contenu avec l'IA.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -504,7 +499,7 @@ export default function AdminQuizzesPage() {
                                      <AccordionContent>
                                          <div className="space-y-4 p-1">
                                              {questions.map((question, qIndex) => (
-                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} isSubmitting={isSubmitting} />
+                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} register={register} errors={errors} isSubmitting={isSubmitting} removeQuestion={removeQuestion} watch={watch} />
                                              ))}
                                               <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })} disabled={isSubmitting}>
                                                 <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
@@ -516,7 +511,7 @@ export default function AdminQuizzesPage() {
                             </Accordion>
                            
                             <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting}>
-                                {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> {editingQuiz ? 'Mettre à jour le quiz' : 'Enregistrer le quiz'}</>)}
+                                {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> Enregistrer le quiz</>)}
                             </Button>
                         </CardContent>
                      </Card>
@@ -603,7 +598,6 @@ export default function AdminQuizzesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex-grow overflow-y-auto pr-6 -mr-6 py-4 space-y-4">
-                        {/* Same form as creator tab */}
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="edit_title">Titre du Quiz</Label>
@@ -680,7 +674,7 @@ export default function AdminQuizzesPage() {
                                      <AccordionContent>
                                           <div className="space-y-4 p-1">
                                              {questions.map((question, qIndex) => (
-                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} isSubmitting={isSubmitting} />
+                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} register={register} errors={errors} isSubmitting={isSubmitting} removeQuestion={removeQuestion} watch={watch} />
                                              ))}
                                               <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}><PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question</Button>
                                          </div>

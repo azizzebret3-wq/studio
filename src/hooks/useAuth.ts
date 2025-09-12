@@ -1,11 +1,10 @@
-// src/hooks/useAuth.ts
+// src/hooks/useAuth.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
 
 interface UserData {
   fullName?: string;
@@ -17,7 +16,16 @@ interface UserData {
   subscription_type?: 'premium' | 'gratuit';
 }
 
-export function useAuth() {
+interface AuthContextType {
+    user: User | null;
+    userData: UserData | null;
+    loading: boolean;
+    reloadUserData: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +37,6 @@ export function useAuth() {
       if (userDoc.exists()) {
         return userDoc.data() as UserData;
       } else {
-        // Fallback for user record without a firestore doc
         return { email: user.email || '', role: 'user', subscription_type: 'gratuit' };
       }
     } catch (error) {
@@ -64,6 +71,20 @@ export function useAuth() {
       setLoading(false);
     }
   }, [user, fetchUserData]);
+  
+  const value = { user, userData, loading, reloadUserData };
 
-  return { user, userData, loading, reloadUserData };
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

@@ -1,7 +1,7 @@
 // src/app/dashboard/take-quiz/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React,_id from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Button } from '@/components/ui/button';
@@ -31,26 +31,26 @@ export default function TakeQuizPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const [quiz, setQuiz] = useState<ActiveQuiz | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<string[][]>([]);
-  const [quizFinished, setQuizFinished] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes default
-  const [results, setResults] = useState<QuestionResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [quiz, setQuiz] = React.useState<ActiveQuiz | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
+  const [userAnswers, setUserAnswers] = React.useState<string[][]>([]);
+  const [quizFinished, setQuizFinished] = React.useState(false);
+  const [timeLeft, setTimeLeft] = React.useState(900); // 15 minutes default
+  const [results, setResults] = React.useState<QuestionResult[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
   const quizId = searchParams.get('id');
   const source = searchParams.get('source');
 
   
-  const handleFinishQuiz = useCallback(async () => {
+  const handleFinishQuiz = React.useCallback(async () => {
     if (!quiz || !user || quizFinished) return; // Prevent multiple submissions
+    
+    setQuizFinished(true);
 
     if (source === 'generated') {
       sessionStorage.removeItem('generatedQuiz');
     }
-    
-    setQuizFinished(true);
 
     const newResults: QuestionResult[] = quiz.questions.map((q, index) => {
       const userSelection = userAnswers[index] || [];
@@ -90,61 +90,58 @@ export default function TakeQuizPage() {
     }
   }, [quiz, user, source, userAnswers, toast, quizFinished]);
 
-  const loadQuiz = useCallback(async () => {
-    setLoading(true);
-    
-    if (source === 'generated') {
-      const quizData = sessionStorage.getItem('generatedQuiz');
-      if (quizData) {
-        const parsedData: GenerateQuizOutput = JSON.parse(quizData);
-        const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
-        setQuiz(activeQuiz);
-        setUserAnswers(Array(activeQuiz.questions.length).fill([]));
-        setTimeLeft(parsedData.quiz.questions.length * 60); // 1 minute per question
-      } else {
-        toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
-        router.push('/dashboard/quizzes');
-      }
-    } else if (quizId) {
-      try {
-        const allQuizzes = await getQuizzesFromFirestore();
-        const foundQuiz = allQuizzes.find(q => q.id === quizId);
-        if (foundQuiz) {
-          setQuiz(foundQuiz);
-          setUserAnswers(Array(foundQuiz.questions.length).fill([]));
-          setTimeLeft(foundQuiz.duration_minutes * 60);
+  React.useEffect(() => {
+    const loadQuiz = async () => {
+      setLoading(true);
+      
+      if (source === 'generated') {
+        const quizData = sessionStorage.getItem('generatedQuiz');
+        if (quizData) {
+          const parsedData: GenerateQuizOutput = JSON.parse(quizData);
+          const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
+          setQuiz(activeQuiz);
+          setUserAnswers(Array(activeQuiz.questions.length).fill([]));
+          setTimeLeft((activeQuiz.questions.length || 10) * 60); // 1 minute per question
         } else {
-          toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
+          toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
           router.push('/dashboard/quizzes');
         }
-      } catch (error) {
-        toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
+      } else if (quizId) {
+        try {
+          const allQuizzes = await getQuizzesFromFirestore();
+          const foundQuiz = allQuizzes.find(q => q.id === quizId);
+          if (foundQuiz) {
+            setQuiz(foundQuiz);
+            setUserAnswers(Array(foundQuiz.questions.length).fill([]));
+            setTimeLeft(foundQuiz.duration_minutes * 60);
+          } else {
+            toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
+            router.push('/dashboard/quizzes');
+          }
+        } catch (error) {
+          toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
+          router.push('/dashboard/quizzes');
+        }
+      } else {
         router.push('/dashboard/quizzes');
       }
-    } else {
-      router.push('/dashboard/quizzes');
-    }
-    setLoading(false);
-  }, [quizId, source, router, toast]);
+      setLoading(false);
+    };
 
-  useEffect(() => {
     loadQuiz();
-  }, [loadQuiz]);
+  }, [quizId, source, router, toast]);
   
-  useEffect(() => {
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (quiz && !quizFinished && timeLeft > 0) {
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
-      return () => clearInterval(timer);
     } else if (timeLeft === 0 && !quizFinished) {
-      toast({
-        title: "Temps écoulé !",
-        description: "Le quiz est terminé. Vos résultats sont en cours de calcul.",
-      });
       handleFinishQuiz();
     }
-  }, [quiz, quizFinished, timeLeft, handleFinishQuiz, toast]);
+    return () => clearInterval(timer);
+  }, [quiz, quizFinished, timeLeft, handleFinishQuiz]);
 
 
   const handleNextQuestion = () => {

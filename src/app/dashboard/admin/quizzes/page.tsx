@@ -121,7 +121,7 @@ export default function AdminQuizzesPage() {
     questions: []
   };
 
-  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid } } = useForm<QuizFormValues>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid, isDirty } } = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
       defaultValues: defaultFormValues,
       mode: 'onChange'

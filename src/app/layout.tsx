@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import React, { useEffect, useState } from 'react';
+import { AuthProvider } from '@/hooks/useAuth';
 
 const APP_NAME = "Gagne ton concours";
 
@@ -18,6 +19,10 @@ export default function RootLayout({
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -35,7 +40,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="font-body antialiased">
-        {isClient ? (
+        <AuthProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -45,7 +50,7 @@ export default function RootLayout({
             {children}
             <Toaster />
           </ThemeProvider>
-        ) : null}
+        </AuthProvider>
       </body>
     </html>
   );

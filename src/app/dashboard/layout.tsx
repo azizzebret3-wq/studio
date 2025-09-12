@@ -45,7 +45,6 @@ const userNavItems = [
 ];
 
 const adminNavItems = [
-  { title: "Gérer Quiz", url: "/dashboard/admin/quizzes", icon: Play, gradient: "from-teal-500 to-cyan-500" },
   { title: "Gérer Contenu", url: "/dashboard/admin/content", icon: FileText, gradient: "from-rose-500 to-pink-500" },
   { title: "Gérer Users", url: "/dashboard/admin/users", icon: Users, gradient: "from-amber-500 to-orange-500" },
 ];

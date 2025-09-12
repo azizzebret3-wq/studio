@@ -37,13 +37,6 @@ export default function AdminDashboardPage() {
           color: "from-amber-500 to-orange-500"
       },
       {
-          title: "Gérer les Quiz",
-          description: "Ajouter, modifier ou supprimer des quiz.",
-          href: "/dashboard/admin/quizzes",
-          icon: ClipboardList,
-           color: "from-teal-500 to-cyan-500"
-      },
-      {
           title: "Gérer la Bibliothèque",
           description: "Gérer les PDF et les vidéos.",
           href: "/dashboard/admin/content",

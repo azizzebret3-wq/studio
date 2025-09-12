@@ -312,11 +312,13 @@ export default function AdminQuizzesPage() {
   };
   
   const handleCloseDialog = useCallback(() => {
+    if (isSaving) return;
     setIsDialogOpen(false);
-  }, []);
+    resetAll();
+  }, [isSaving, resetAll]);
 
   const onDialogClose = (open: boolean) => {
-    if (!open) {
+    if (!open && !isSaving) {
       resetAll();
       setIsDialogOpen(false);
     }
@@ -372,6 +374,7 @@ export default function AdminQuizzesPage() {
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
+        setIsSaving(false);
         handleCloseDialog();
         fetchQuizzes();
     }).catch(error => {
@@ -380,7 +383,6 @@ export default function AdminQuizzesPage() {
             title: 'Erreur d\'enregistrement',
             description: 'Une erreur est survenue lors de la sauvegarde du quiz.',
         });
-    }).finally(() => {
         setIsSaving(false);
     });
   }
@@ -409,6 +411,8 @@ export default function AdminQuizzesPage() {
         setValue('category', quiz.category);
         setValue('difficulty', quiz.difficulty);
         setValue('duration_minutes', quiz.duration_minutes);
+        setValue('isMockExam', false); // Ensure generated quiz is not a mock exam by default
+        setValue('scheduledFor', undefined);
         
         setQuestions((quiz.questions || []).map(q => ({
             id: crypto.randomUUID(),

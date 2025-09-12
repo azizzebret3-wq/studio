@@ -1,7 +1,7 @@
 // src/app/dashboard/take-quiz/page.tsx
 'use client';
 
-import React,_id from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Button } from '@/components/ui/button';

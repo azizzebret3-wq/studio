@@ -5,7 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import React, { useEffect, useState } from 'react';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider } from '@/hooks/useAuth.tsx';
 
 const APP_NAME = "Gagne ton concours";
 

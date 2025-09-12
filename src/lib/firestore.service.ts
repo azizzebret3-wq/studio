@@ -78,7 +78,7 @@ export const deleteQuizFromFirestore = async (quizId: string) => {
 export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Quiz>) => {
     try {
         const quizDocRef = doc(db, 'quizzes', quizId);
-        // Ensure createdAt is not overwritten
+        // Ensure createdAt is not overwritten by removing it from the update object
         const { createdAt, ...restOfData } = quizData;
         await updateDoc(quizDocRef, { ...restOfData });
     } catch (e) {
@@ -92,7 +92,7 @@ export const saveQuizToFirestore = async (quizData: NewQuizData) => {
   try {
     const docRef = await addDoc(collection(db, "quizzes"), {
         ...quizData,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp() // Use server-side timestamp for consistency
     });
     console.log("Quiz document written with ID: ", docRef.id);
     return docRef.id;

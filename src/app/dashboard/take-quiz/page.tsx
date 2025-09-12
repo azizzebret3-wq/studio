@@ -51,6 +51,12 @@ export default function TakeQuizPage() {
     if (source === 'generated') {
       sessionStorage.removeItem('generatedQuiz');
     }
+    
+    if (!quiz.questions) {
+      toast({ title: 'Erreur de Quiz', description: "Ce quiz ne contient aucune question.", variant: 'destructive' });
+      router.push('/dashboard/quizzes');
+      return;
+    }
 
     const newResults: QuestionResult[] = quiz.questions.map((q, index) => {
       const userSelection = userAnswers[index] || [];
@@ -88,7 +94,7 @@ export default function TakeQuizPage() {
         console.error("Failed to save attempt", error);
         toast({ title: 'Erreur', description: "Impossible d'enregistrer vos résultats.", variant: 'destructive' });
     }
-  }, [quiz, user, source, userAnswers, toast, quizFinished]);
+  }, [quiz, user, source, userAnswers, toast, quizFinished, router]);
 
   React.useEffect(() => {
     const loadQuiz = async () => {
@@ -103,7 +109,7 @@ export default function TakeQuizPage() {
           const parsedData: GenerateQuizOutput = JSON.parse(quizData);
           const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
           setQuiz(activeQuiz as ActiveQuiz);
-          setUserAnswers(Array(activeQuiz.questions.length).fill([]));
+          setUserAnswers(Array((activeQuiz.questions || []).length).fill([]));
           setTimeLeft((activeQuiz.questions.length || 10) * 60); // 1 minute per question
         } else {
           toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
@@ -115,7 +121,7 @@ export default function TakeQuizPage() {
           const foundQuiz = allQuizzes.find(q => q.id === quizId);
           if (foundQuiz) {
             setQuiz(foundQuiz);
-            setUserAnswers(Array(foundQuiz.questions.length).fill([]));
+            setUserAnswers(Array((foundQuiz.questions || []).length).fill([]));
             setTimeLeft(foundQuiz.duration_minutes * 60);
           } else {
             toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
@@ -148,7 +154,7 @@ export default function TakeQuizPage() {
 
 
   const handleNextQuestion = () => {
-    if (!quiz) return;
+    if (!quiz || !quiz.questions) return;
     if (currentQuestionIndex < quiz.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
@@ -175,6 +181,25 @@ export default function TakeQuizPage() {
       <div className="flex flex-col gap-4 justify-center items-center h-screen">
           <Loader className="w-12 h-12 animate-spin text-purple-500" />
           <p className="font-medium text-muted-foreground">Chargement du quiz...</p>
+      </div>
+    );
+  }
+  
+  if (!quiz.questions || quiz.questions.length === 0) {
+     return (
+      <div className="p-4 sm:p-6 md:p-8 space-y-6">
+        <Card className="glassmorphism shadow-xl">
+          <CardHeader className="text-center">
+             <XCircle className="w-16 h-16 mx-auto text-red-500" />
+             <CardTitle className="text-3xl font-black gradient-text">Quiz Invalide</CardTitle>
+             <CardDescription className="text-lg font-medium">Ce quiz ne contient aucune question.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={() => router.push('/dashboard/quizzes')}>
+                Retourner à la liste des quiz
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

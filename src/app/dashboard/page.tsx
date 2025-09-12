@@ -59,7 +59,7 @@ export default function Dashboard() {
           getDocumentsFromFirestore(),
         ]);
         
-        setQuizzes(fetchedQuizzes.filter(q => !q.isMockExam));
+        setQuizzes(fetchedQuizzes); // All quizzes including mock exams for stats
         setLatestContent(fetchedDocuments.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0,3));
         
         try {
@@ -87,6 +87,7 @@ export default function Dashboard() {
   }, [user, loading, toast]);
 
   useEffect(() => {
+      if (loadingData) return;
       const totalQuizzes = quizzes.length;
       const completedQuizzes = recentAttempts.length;
       const averageScore = completedQuizzes > 0 
@@ -99,7 +100,7 @@ export default function Dashboard() {
         averageScore: Math.round(averageScore),
         streak: completedQuizzes, 
       });
-  }, [quizzes, recentAttempts]);
+  }, [quizzes, recentAttempts, loadingData]);
 
   if (loading || loadingData) {
     return (
@@ -123,6 +124,7 @@ export default function Dashboard() {
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
   const firstName = userData?.fullName?.split(' ')[0] || 'Champion';
+  const recommendedQuizzes = quizzes.filter(q => !q.isMockExam);
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -247,7 +249,7 @@ export default function Dashboard() {
                   <Loader className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-spin" />
                   <h3 className="text-lg font-semibold text-muted-foreground">Chargement des quiz...</h3>
                 </div>
-              ) : quizzes.length === 0 ? (
+              ) : recommendedQuizzes.length === 0 ? (
                 <div className="text-center py-10">
                   <Play className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-muted-foreground">Aucun quiz disponible</h3>
@@ -255,7 +257,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {quizzes.slice(0,4).map((quiz, index) => (
+                  {recommendedQuizzes.slice(0,4).map((quiz, index) => (
                     <div key={quiz.id} className="group bg-background/60 backdrop-blur-sm border border-border/40 rounded-xl p-3 hover:bg-accent/50 transition-all">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">

@@ -76,6 +76,20 @@ type Question = {
   explanation: string;
 };
 
+// Helper to format date for datetime-local input
+const formatDateForInput = (date: Date | undefined): string => {
+    if (!date) return '';
+    try {
+        const d = new Date(date);
+        // Pad month, day, hours, and minutes with a leading zero if needed
+        const pad = (num: number) => num.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (e) {
+        return '';
+    }
+};
+
+
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -149,7 +163,7 @@ export default function AdminQuizzesPage() {
         isMockExam: quiz.isMockExam || false,
         scheduledFor: quiz.scheduledFor ? new Date(quiz.scheduledFor) : undefined,
       });
-      setQuestions(quiz.questions.map(q => ({
+      setQuestions((quiz.questions || []).map(q => ({
         id: crypto.randomUUID(),
         question: q.question,
         options: q.options.map(opt => ({ id: crypto.randomUUID(), value: opt })),
@@ -212,7 +226,7 @@ export default function AdminQuizzesPage() {
     setIsSaving(true);
     
     const savePromise = editingQuiz
-        ? updateQuizInFirestore(editingQuiz.id!, quizDataToSave)
+        ? updateQuizInFirestore(editingQuiz.id!, quizDataToSave as Partial<Quiz>)
         : saveQuizToFirestore(quizDataToSave);
 
     savePromise.then(() => {
@@ -323,7 +337,7 @@ export default function AdminQuizzesPage() {
         setValue('difficulty', quiz.difficulty);
         setValue('duration_minutes', quiz.duration_minutes);
         
-        setQuestions(quiz.questions.map(q => ({
+        setQuestions((quiz.questions || []).map(q => ({
             id: crypto.randomUUID(),
             question: q.question,
             options: q.options.map(opt => ({ id: crypto.randomUUID(), value: opt })),
@@ -493,7 +507,23 @@ export default function AdminQuizzesPage() {
                   <Label htmlFor="isMockExam">Concours Blanc</Label>
                 </div>
 
-                {isMockExam && <div className="mt-4 space-y-1.5"><Label>Date de programmation</Label><Input type="datetime-local" {...register("scheduledFor", { valueAsDate: true })} />{errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}</div>}
+                {isMockExam && (
+                    <div className="mt-4 space-y-1.5">
+                        <Label>Date de programmation</Label>
+                        <Controller
+                            name="scheduledFor"
+                            control={control}
+                            render={({ field }) => (
+                                <Input 
+                                    type="datetime-local" 
+                                    value={formatDateForInput(field.value)}
+                                    onChange={(e) => field.onChange(new Date(e.target.value))}
+                                />
+                            )}
+                        />
+                        {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
+                    </div>
+                )}
                 </Card>
 
                 <hr/>

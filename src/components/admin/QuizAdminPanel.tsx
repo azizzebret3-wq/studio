@@ -200,7 +200,7 @@ const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isG
                         {q.options.map((option) => (
                             <div key={option.id} className="flex items-center gap-2">
                                 <Checkbox
-                                  id={`correct-${q.id}-${option.id}`}
+                                  id={`correct-${option.id}`}
                                   checked={q.correctAnswers.includes(option.value)}
                                   onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
                                   disabled={!option.value}
@@ -370,7 +370,6 @@ export default function QuizAdminPanel() {
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
         
-        // Use a timeout to allow state updates to settle before changing the DOM
         setTimeout(() => {
             handleCloseDialog();
             fetchQuizzes();

@@ -18,7 +18,7 @@ export type GenerateQuizInput = z.infer<typeof GenerateQuizInputSchema>;
 const QuestionSchema = z.object({
     question: z.string().describe('The question text.'),
     options: z.array(z.string()).describe('A list of possible answers.'),
-    correctAnswers: z.array(z.string()).describe('A list of correct answers.'),
+    correctAnswers: z.array(z.string()).describe('A list of correct answers. Each string in this array must be an exact match to one of the strings in the `options` array.'),
     explanation: z.string().optional().describe('An optional explanation for the correct answer.'),
 });
 
@@ -61,7 +61,7 @@ Please generate a complete quiz with the following structure:
 - For each question:
     - The question text.
     - At least 4 plausible options.
-    - A list of one or more correct answers.
+    - A list of one or more correct answers. CRITICAL: Each string in the 'correctAnswers' array must be an exact, case-sensitive match to one of the strings in the 'options' array.
     - A brief explanation for the answer, especially if the question is complex.
 
 Ensure the questions are relevant to Burkinabè civil service exams and cover different aspects of the topic. The options should be well-formulated, with credible distractors.

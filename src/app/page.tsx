@@ -27,33 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 
-export default function Home() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient && !loading && user) {
-      router.push("/dashboard");
-    }
-  }, [user, loading, router, isClient]);
-  
-  if (loading || !isClient || user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-          <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-pink-400 rounded-full animate-spin" style={{animationDuration: '1.5s', animationDirection: 'reverse'}}></div>
-          <div className="absolute inset-2 w-16 h-16 border-4 border-transparent border-t-cyan-400 rounded-full animate-spin" style={{animationDuration: '2s'}}></div>
-        </div>
-      </div>
-    );
-  }
-
+function HomePageContent() {
   const features = [
     {
       icon: Play,
@@ -541,4 +515,35 @@ export default function Home() {
       </footer>
     </div>
   );
+}
+
+
+export default function Home() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient && !loading && user) {
+      router.push("/dashboard");
+    }
+  }, [user, loading, router, isClient]);
+
+  if (loading || !isClient || user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-pink-400 rounded-full animate-spin" style={{animationDuration: '1.5s', animationDirection: 'reverse'}}></div>
+          <div className="absolute inset-2 w-16 h-16 border-4 border-transparent border-t-cyan-400 rounded-full animate-spin" style={{animationDuration: '2s'}}></div>
+        </div>
+      </div>
+    );
+  }
+
+  return <HomePageContent />;
 }

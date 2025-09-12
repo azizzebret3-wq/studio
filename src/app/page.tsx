@@ -27,6 +27,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 
+const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M12.52.02c1.31-.02 2.61.1 3.82.38a9.42 9.42 0 0 1 5.02 5.02 9.42 9.42 0 0 1-.38 12.38 9.42 9.42 0 0 1-5.02 5.02 9.42 9.42 0 0 1-12.38-.38 9.42 9.42 0 0 1-5.02-5.02 9.42 9.42 0 0 1 .38-12.38A9.42 9.42 0 0 1 12.52.02Z" />
+        <path d="M15.54 8.52a3 3 0 0 0-2.03-2.03c.12-.02.24-.03.37-.03 1.09 0 2.18.39 3.03 1.1.2.16.4.32.57.51" />
+        <path d="M15.54 8.52a3.01 3.01 0 0 0-3.3-2.43 3 3 0 0 0-2.83 2.83v5.66a3 3 0 0 1-3 3" />
+    </svg>
+);
+
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M21.1 12.8a8.9 8.9 0 0 0-14.2 8.3L3 22l1.9-4.2a8.9 8.9 0 0 0 16.2-3.3Z" />
+        <path d="M5.4 12.8a8.9 8.9 0 0 1 12-4.3" />
+        <path d="m11.4 14.8-2-2.2" />
+        <path d="M14.8 11.4 17 9.2" />
+    </svg>
+);
+
 function HomePageContent() {
   const features = [
     {
@@ -462,13 +479,17 @@ function HomePageContent() {
       {/* Footer Premium */}
       <footer className="bg-gradient-to-b from-gray-900 to-black text-white py-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="flex flex-col items-center mb-12">
              <div className="inline-block mb-6">
                 <Logo />
              </div>
-            <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
+            <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto text-center">
               La plateforme éducative de nouvelle génération qui révolutionne la préparation aux concours au Burkina Faso
             </p>
+            <div className="flex space-x-6">
+                <Link href="#" className="text-gray-400 hover:text-white transition-colors"><TikTokIcon className="w-6 h-6"/></Link>
+                <Link href="#" className="text-gray-400 hover:text-white transition-colors"><WhatsAppIcon className="w-6 h-6"/></Link>
+            </div>
           </div>
           
           <div className="grid md:grid-cols-4 gap-8 mb-12 text-center md:text-left">

@@ -270,7 +270,7 @@ export default function AdminQuizzesPage() {
     fetchQuizzes();
   }, [fetchQuizzes]);
   
-  const resetAll = () => {
+  const resetAll = useCallback(() => {
      reset({
       title: '',
       description: '',
@@ -283,7 +283,7 @@ export default function AdminQuizzesPage() {
     });
     setQuestions([]);
     setEditingQuiz(null);
-  }
+  }, [reset])
 
   const handleOpenDialog = (quiz?: Quiz) => {
     if (quiz) {
@@ -311,9 +311,15 @@ export default function AdminQuizzesPage() {
     setIsDialogOpen(true);
   };
   
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setIsDialogOpen(false);
-    resetAll();
+  }, []);
+
+  const onDialogClose = (open: boolean) => {
+    if (!open) {
+      resetAll();
+      setIsDialogOpen(false);
+    }
   }
 
   const validateAndSubmit = (formData: QuizDetailsFormData) => {
@@ -506,7 +512,7 @@ export default function AdminQuizzesPage() {
         </CardContent>
       </Card>
       
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={onDialogClose}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingQuiz ? 'Modifier le Quiz' : 'Créer un nouveau Quiz'}</DialogTitle>

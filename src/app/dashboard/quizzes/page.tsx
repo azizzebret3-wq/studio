@@ -8,15 +8,16 @@ import { useAuth } from '@/hooks/useAuth.tsx';
 import { 
   ClipboardList, 
   Search, 
-  ArrowRight,
   Crown,
   Lock,
   Rocket,
   Loader,
+  BrainCircuit,
+  Wand,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { getQuizzesFromFirestore, Quiz } from '@/lib/firestore.service';
+import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 
 export default function QuizzesPage() {
   const { userData } = useAuth();
@@ -42,6 +44,9 @@ export default function QuizzesPage() {
     access: 'all',
   });
   
+  const [topic, setTopic] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
 
@@ -65,6 +70,43 @@ export default function QuizzesPage() {
     };
     fetchQuizzes();
   }, [toast]);
+  
+  const handleGenerateAndStart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topic.trim()) {
+      toast({
+        title: 'Sujet manquant',
+        description: 'Veuillez entrer un sujet pour générer le quiz.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result: GenerateQuizOutput = await generateQuiz({ topic });
+      
+      sessionStorage.setItem('generatedQuiz', JSON.stringify(result));
+      
+      toast({
+        title: 'Quiz généré avec succès !',
+        description: 'Vous allez être redirigé pour commencer le quiz.',
+      });
+
+      router.push('/dashboard/take-quiz?source=generated');
+
+    } catch (error) {
+      console.error('Failed to generate quiz:', error);
+      toast({
+        title: 'Erreur de génération',
+        description: "L'IA n'a pas pu générer le quiz. Veuillez réessayer.",
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   const handleFilterChange = (type: string, value: string) => {
     setFilters(prev => ({ ...prev, [type]: value }));
@@ -94,22 +136,67 @@ export default function QuizzesPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-black gradient-text">
-                Tous les Quiz
+                Quiz & Entraînement
               </h1>
               <p className="text-sm sm:text-base text-gray-600 font-medium">
-                Mettez-vous au défi avec notre sélection de quiz.
+                Mettez-vous au défi et entraînez-vous à la demande.
               </p>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* AI Quiz Generator */}
+       <Card className="w-full glassmorphism shadow-xl">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md">
+                <BrainCircuit className="w-5 h-5 text-white" />
+            </div>
+            <div>
+                <CardTitle className="gradient-text font-black">Générateur de Quiz IA</CardTitle>
+                <CardDescription className="font-semibold">Entraînez-vous sur n'importe quel sujet, instantanément.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleGenerateAndStart} className="flex flex-col sm:flex-row items-center gap-4">
+              <Input
+                id="topic"
+                placeholder="Ex: La révolution de 1983 au Burkina Faso..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                disabled={isGenerating}
+                className="h-11 text-base rounded-lg flex-1"
+              />
+            <Button
+              type="submit"
+              disabled={isGenerating}
+              className="w-full sm:w-auto h-11 text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader className="w-5 h-5 mr-3 animate-spin" />
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Wand className="w-5 h-5 mr-3" />
+                  Générer
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
 
       <Card className="glassmorphism shadow-xl p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative sm:col-span-2 lg:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Rechercher..."
+              placeholder="Rechercher un quiz..."
               className="pl-9 h-10 rounded-lg text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

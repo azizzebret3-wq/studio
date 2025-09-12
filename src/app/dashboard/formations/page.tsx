@@ -21,7 +21,7 @@ const trainingPaths = [
   {
     title: "Maîtriser les Tests Psychotechniques",
     description: "Développez votre logique, votre raisonnement et votre rapidité pour exceller dans les tests psychotechniques.",
-    icon: Zap,
+    icon: BarChart,
     color: "from-purple-500 to-pink-500",
     progress: 30,
     status: "Non commencé",

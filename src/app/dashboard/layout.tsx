@@ -1,7 +1,7 @@
 // src/app/dashboard/layout.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React,  { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { getAuth, signOut } from 'firebase/auth';
@@ -40,8 +40,7 @@ import TiktokFloat from '@/components/tiktok-float';
 
 const userNavItems = [
   { title: "Accueil", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
-  { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-green-500 to-emerald-500" },
-  { title: "Générer Quiz", url: "/dashboard/generate-quiz", icon: BrainCircuit, gradient: "from-blue-500 to-cyan-500" },
+  { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-blue-500 to-cyan-500" },
   { title: "Concours", url: "/dashboard/mock-exams", icon: CalendarClock, gradient: "from-indigo-500 to-blue-500" },
   { title: "Ressources", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
   { title: "Formations", url: "/dashboard/formations", icon: Trophy, gradient: "from-rose-500 to-pink-500" },
@@ -56,7 +55,6 @@ const adminNavItems = [
 const mobileNavItems = [
   { title: "Accueil", url: "/dashboard", icon: BarChart3 },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play },
-  { title: "Générer", url: "/dashboard/generate-quiz", icon: BrainCircuit },
   { title: "Concours", url: "/dashboard/mock-exams", icon: CalendarClock },
   { title: "Ressources", url: "/dashboard/documents", icon: BookOpen },
 ];
@@ -426,7 +424,7 @@ export default function DashboardLayout({
          {/* Bottom mobile navigation */}
          <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
-             <div className="grid grid-cols-5 gap-1 p-2">
+             <div className="grid grid-cols-4 gap-1 p-2">
                  {mobileNavItems.map((item) => {
                      const fullItem = userNavItems.find(nav => nav.title.startsWith(item.title))!;
                      return (

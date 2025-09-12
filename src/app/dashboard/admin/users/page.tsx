@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Loader, Shield, UserCheck, MoreHorizontal, Check, ChevronsUpDown, ArrowLeft } from "lucide-react";
-import { AppUser, getUsersFromFirestore, updateUserRoleInFirestore } from '@/lib/firestore.service';
+import { Users, Loader, Shield, UserCheck, MoreHorizontal, Check, ChevronsUpDown, ArrowLeft, Crown } from "lucide-react";
+import { AppUser, getUsersFromFirestore, updateUserRoleInFirestore, updateUserSubscriptionInFirestore } from '@/lib/firestore.service';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -43,6 +42,7 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [newRole, setNewRole] = useState<'admin' | 'user' | ''>('');
+  const [newSubscription, setNewSubscription] = useState<'premium' | 'gratuit' | ''>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -71,26 +71,29 @@ export default function AdminUsersPage() {
   const handleOpenDialog = (user: AppUser) => {
     setSelectedUser(user);
     setNewRole(user.role || 'user');
+    setNewSubscription(user.subscription_type || 'gratuit');
     setIsDialogOpen(true);
   }
 
-  const handleRoleChange = async () => {
-    if (!selectedUser || !newRole) return;
+  const handleSaveChanges = async () => {
+    if (!selectedUser || !newRole || !newSubscription) return;
     setIsSaving(true);
     try {
       await updateUserRoleInFirestore(selectedUser.uid, newRole as 'admin' | 'user');
+      await updateUserSubscriptionInFirestore(selectedUser.uid, newSubscription as 'premium' | 'gratuit');
+      
       toast({
-        title: 'Rôle mis à jour',
-        description: `Le rôle de ${selectedUser.fullName} est maintenant ${newRole}.`,
+        title: 'Modifications enregistrées',
+        description: `Les informations de ${selectedUser.fullName} ont été mises à jour.`,
       });
-      // Refresh user list to show new role
-      await fetchUsers();
+      
+      await fetchUsers(); // Refresh user list
       setIsDialogOpen(false);
     } catch (error) {
        toast({
         variant: 'destructive',
         title: 'Erreur de mise à jour',
-        description: 'Le rôle de l\'utilisateur n\'a pas pu être modifié.',
+        description: 'Les informations de l\'utilisateur n\'ont pas pu être modifiées.',
       });
     } finally {
       setIsSaving(false);
@@ -113,7 +116,7 @@ export default function AdminUsersPage() {
                 Gérer les Utilisateurs
               </h1>
               <p className="text-sm sm:text-base text-gray-600 font-medium">
-                Consultez la liste des utilisateurs et gérez leurs rôles.
+                Consultez la liste des utilisateurs et gérez leurs permissions.
               </p>
             </div>
           </div>
@@ -141,8 +144,10 @@ export default function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
-                  <TableHead className="hidden sm:table-cell">Téléphone</TableHead>
+                  <TableHead className="hidden lg:table-cell">Téléphone</TableHead>
                   <TableHead>Rôle</TableHead>
+                  <TableHead>Abonnement</TableHead>
+                  <TableHead className="hidden md:table-cell">Type Concours</TableHead>
                   <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
                   <TableHead>
                     <span className="sr-only">Actions</span>
@@ -153,13 +158,20 @@ export default function AdminUsersPage() {
                 {users.map((user) => (
                   <TableRow key={user.uid}>
                     <TableCell className="font-medium">{user.fullName || 'N/A'}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{user.phone}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{user.phone}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>
                         {user.role === 'admin' ? <Shield className="mr-1 h-3 w-3"/> : <UserCheck className="mr-1 h-3 w-3"/>}
                         {user.role}
                       </Badge>
                     </TableCell>
+                     <TableCell>
+                      <Badge variant={user.subscription_type === 'premium' ? 'default' : 'outline'} className={user.subscription_type === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0' : ''}>
+                        {user.subscription_type === 'premium' && <Crown className="mr-1 h-3 w-3"/>}
+                        {user.subscription_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell capitalize">{user.competitionType}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {format(user.createdAt, 'dd MMM yyyy', { locale: fr })}
                     </TableCell>
@@ -174,7 +186,7 @@ export default function AdminUsersPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onSelect={() => handleOpenDialog(user)}>
-                            Modifier le rôle
+                            Modifier
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -190,14 +202,14 @@ export default function AdminUsersPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifier le rôle de {selectedUser?.fullName}</DialogTitle>
+            <DialogTitle>Modifier {selectedUser?.fullName}</DialogTitle>
             <DialogDescription>
-              La modification du rôle changera les permissions de l'utilisateur sur la plateforme.
+              Changez le rôle ou le type d'abonnement de cet utilisateur.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-6 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="role-select">Nouveau rôle</Label>
+              <Label htmlFor="role-select">Rôle</Label>
                <Select value={newRole} onValueChange={(value) => setNewRole(value as 'admin' | 'user')}>
                   <SelectTrigger id="role-select">
                     <SelectValue placeholder="Sélectionner un rôle" />
@@ -208,10 +220,22 @@ export default function AdminUsersPage() {
                   </SelectContent>
                 </Select>
             </div>
+             <div className="grid gap-2">
+              <Label htmlFor="subscription-select">Abonnement</Label>
+               <Select value={newSubscription} onValueChange={(value) => setNewSubscription(value as 'premium' | 'gratuit')}>
+                  <SelectTrigger id="subscription-select">
+                    <SelectValue placeholder="Sélectionner un abonnement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gratuit">Gratuit</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>Annuler</Button>
-            <Button onClick={handleRoleChange} disabled={isSaving}>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
               {isSaving && <Loader className="mr-2 h-4 w-4 animate-spin"/>}
               Enregistrer
             </Button>

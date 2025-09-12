@@ -1,50 +1,60 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the requesting user is an admin
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if a user is an admin
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users collection rules
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Any authenticated user can view public user profiles
-      allow read: if request.auth != null;
-      // A user can create their own document or an admin can
-      allow create: if request.auth.uid == userId || isAdmin();
-      // A user can only update their own document, or an admin can
-      allow update: if request.auth.uid == userId || isAdmin();
-       // Only admins can delete users
-      allow delete: if isAdmin();
+      // Any authenticated user can read user profiles (for admin panel, etc.)
+      allow read: if isAuthenticated();
+      // A user can create their own document
+      allow create: if request.auth.uid == userId;
+      // A user can update their own data. An admin can update anyone's data.
+      allow update: if (request.auth.uid == userId) || isAdmin();
     }
 
-    // Quizzes collection rules
+    // Rules for content collections (quizzes, documents, training_paths)
     match /quizzes/{quizId} {
       // Any authenticated user can read quizzes
-      allow read: if request.auth != null;
-      // Only admins can write (create, update, delete) quizzes
+      allow read: if isAuthenticated();
+      // Only admins can create, update, or delete quizzes
       allow write: if isAdmin();
     }
 
-    // Documents collection rules
-    match /documents/{documentId} {
-       // Any authenticated user can read documents
-      allow read: if request.auth != null;
-       // Only admins can write (create, update, delete) documents
+    match /documents/{docId} {
+      // Any authenticated user can read documents
+      allow read: if isAuthenticated();
+      // Only admins can create, update, or delete documents
       allow write: if isAdmin();
     }
     
-    // Attempts collection rules
+    match /training_paths/{pathId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+    }
+
+    // Rules for user-specific data (attempts, notifications)
     match /attempts/{attemptId} {
-      // A user can only read their own attempts
-      allow read: if request.auth.uid == resource.data.userId;
-       // An authenticated user can create their own attempt
-      allow create: if request.auth.uid == request.resource.data.userId;
-       // Attempts cannot be updated or deleted by clients
+      // A user can only read and create their own attempts
+      allow read, create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      // No one can update or delete attempts to preserve history
       allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      // A user can only read and update (mark as read) their own notifications
+      allow read, update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      // Only an admin can create new notifications
+      allow create: if isAdmin();
     }
   }
 }

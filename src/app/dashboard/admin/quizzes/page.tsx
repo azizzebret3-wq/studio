@@ -1,3 +1,4 @@
+
 // src/app/dashboard/admin/quizzes/page.tsx
 'use client';
 
@@ -60,9 +61,20 @@ const quizFormSchema = z.object({
   isMockExam: z.boolean(),
   scheduledFor: z.string().optional(),
   questions: z.array(manualQuestionSchema).min(1, 'Au moins une question est requise.'),
-}).refine(data => !data.isMockExam || (data.isMockExam && data.scheduledFor), {
-    message: "La date du concours blanc est requise.",
-    path: ["scheduledFor"],
+}).refine(data => {
+    // Check if every question's correctAnswers are present in its options
+    const allCorrectAnswersAreValid = data.questions.every(q => 
+        q.correctAnswers.every(ca => q.options.includes(ca))
+    );
+    if (!allCorrectAnswersAreValid) return false;
+
+    // Check scheduledFor date if isMockExam is true
+    if (data.isMockExam && !data.scheduledFor) return false;
+
+    return true;
+}, {
+    message: "Certaines réponses correctes ne sont pas dans les options, ou la date du concours blanc est manquante.",
+    path: ["questions"], // General path, specific checks could be more granular
 });
 
 type QuizFormValues = z.infer<typeof quizFormSchema>;
@@ -125,7 +137,7 @@ export default function AdminQuizzesPage() {
       mode: 'onChange'
   });
   
-  const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
       control,
       name: "questions",
   });
@@ -465,15 +477,15 @@ export default function AdminQuizzesPage() {
                                       </AccordionContent>
                                   </AccordionItem>
                                   <AccordionItem value="item-2" className="border-b-0">
-                                       <AccordionTrigger>Questions ({questions.length})</AccordionTrigger>
+                                       <AccordionTrigger>Questions ({fields.length})</AccordionTrigger>
                                        <AccordionContent>
                                           {errors.questions && !errors.questions.root && <p className="text-sm text-red-500 pb-2">{errors.questions.message}</p>}
                                            <div className="space-y-4 p-1">
-                                              {questions.map((question, qIndex) => (
+                                              {fields.map((question, qIndex) => (
                                                   <Card key={question.id} className="p-4 bg-background/50 border">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
-                                                        <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
+                                                        <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => remove(qIndex)}>
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>
                                                     </div>
@@ -486,7 +498,7 @@ export default function AdminQuizzesPage() {
                                                             {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.correctAnswers?.message}</p>}
                                                             
                                                             <div className="space-y-2">
-                                                                {getValues(`questions.${qIndex}.options`).map((option, optIndex) => (
+                                                                {getValues(`questions.${qIndex}.options`).map((_, optIndex) => (
                                                                     <div key={`${question.id}-option-${optIndex}`} className="flex items-center gap-2">
                                                                         <Controller
                                                                             control={control}
@@ -497,9 +509,10 @@ export default function AdminQuizzesPage() {
                                                                                     onCheckedChange={(checked) => {
                                                                                         const optionValue = getValues(`questions.${qIndex}.options`)[optIndex];
                                                                                         if (optionValue === undefined || optionValue.trim() === '') return;
+                                                                                        const currentAnswers = field.value || [];
                                                                                         const newValue = checked
-                                                                                            ? [...(field.value || []), optionValue]
-                                                                                            : (field.value || []).filter((ans:string) => ans !== optionValue);
+                                                                                            ? [...currentAnswers, optionValue]
+                                                                                            : currentAnswers.filter((ans:string) => ans !== optionValue);
                                                                                         field.onChange(newValue);
                                                                                     }}
                                                                                 />
@@ -515,6 +528,12 @@ export default function AdminQuizzesPage() {
                                                                             const currentOptions = getValues(`questions.${qIndex}.options`);
                                                                             const newOptions = currentOptions.filter((_, i) => i !== optIndex);
                                                                             setValue(`questions.${qIndex}.options`, newOptions);
+                                                                            // Also remove from correct answers if it was selected
+                                                                            const removedOption = currentOptions[optIndex];
+                                                                            const currentCorrectAnswers = getValues(`questions.${qIndex}.correctAnswers`);
+                                                                            if(currentCorrectAnswers.includes(removedOption)) {
+                                                                                setValue(`questions.${qIndex}.correctAnswers`, currentCorrectAnswers.filter(ans => ans !== removedOption));
+                                                                            }
                                                                           }} 
                                                                           disabled={getValues(`questions.${qIndex}.options`).length <= 2}>
                                                                             <Trash2 className="w-4 h-4" />
@@ -540,7 +559,7 @@ export default function AdminQuizzesPage() {
                                                     </div>
                                                   </Card>
                                               ))}
-                                              <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}>
+                                              <Button type="button" variant="outline" onClick={() => append({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}>
                                                   <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
                                               </Button>
                                            </div>
@@ -562,3 +581,5 @@ export default function AdminQuizzesPage() {
     </div>
   );
 }
+
+    

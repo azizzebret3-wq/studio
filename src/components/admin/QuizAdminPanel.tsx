@@ -49,7 +49,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 
-// Zod Schema for main form fields
 const quizDetailsSchema = z.object({
   title: z.string().min(1, "Le titre est requis."),
   description: z.string().min(1, "La description est requise."),
@@ -66,17 +65,15 @@ const quizDetailsSchema = z.object({
 
 type QuizDetailsFormData = z.infer<typeof quizDetailsSchema>;
 
-// Local state types for questions
 type Option = { id: string; value: string };
-export type Question = {
+type Question = {
   id: string;
   question: string;
   options: Option[];
-  correctAnswers: string[]; // Stores the 'value' of correct options
+  correctAnswers: string[];
   explanation: string;
 };
 
-// Helper to format date for datetime-local input
 const formatDateForInput = (date: Date | undefined): string => {
     if (!date) return '';
     try {
@@ -88,9 +85,6 @@ const formatDateForInput = (date: Date | undefined): string => {
     }
 };
 
-// =================================================================
-// Main Admin Panel Component
-// =================================================================
 export default function QuizAdminPanel() {
   const { toast } = useToast();
   const router = useRouter();
@@ -101,10 +95,9 @@ export default function QuizAdminPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  const form = useForm<QuizDetailsFormData>({
+  const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm<QuizDetailsFormData>({
     resolver: zodResolver(quizDetailsSchema),
     defaultValues: {
       title: '',
@@ -117,7 +110,6 @@ export default function QuizAdminPanel() {
     },
   });
 
-  const { reset, setValue, register, control, watch, formState: { errors } } = form;
   const isMockExam = watch("isMockExam");
 
   const fetchQuizzes = useCallback(async () => {
@@ -135,9 +127,9 @@ export default function QuizAdminPanel() {
   useEffect(() => {
     fetchQuizzes();
   }, [fetchQuizzes]);
-  
-  const resetAll = useCallback(() => {
-     reset({
+
+  const resetForm = useCallback(() => {
+    reset({
       title: '',
       description: '',
       category: '',
@@ -149,7 +141,7 @@ export default function QuizAdminPanel() {
     });
     setQuestions([]);
     setEditingQuiz(null);
-  }, [reset])
+  }, [reset]);
 
   const handleOpenDialog = (quiz?: Quiz) => {
     if (quiz) {
@@ -172,28 +164,31 @@ export default function QuizAdminPanel() {
         explanation: q.explanation || '',
       })));
     } else {
-      resetAll();
+      resetForm();
     }
     setIsDialogOpen(true);
   };
   
-  const handleCloseDialog = useCallback(() => {
+  const handleCloseDialog = () => {
     setIsDialogOpen(false);
-  }, []);
+    resetForm();
+  };
   
-  const onDialogClose = (open: boolean) => {
-    if (!open) {
-      handleCloseDialog();
-      setTimeout(resetAll, 300);
-    }
+  const handleDialogChange = (open: boolean) => {
+      if(!open) {
+          handleCloseDialog();
+      } else {
+          setIsDialogOpen(true);
+      }
   }
 
-  const validateAndSubmit = (formData: QuizDetailsFormData) => {
+  const validateAndSubmit = async (formData: QuizDetailsFormData) => {
     if (questions.length === 0) {
       toast({ variant: 'destructive', title: 'Erreur', description: 'Un quiz doit avoir au moins une question.' });
       return;
     }
-    for (const q of questions) {
+    // Other validations...
+     for (const q of questions) {
       if (!q.question.trim()) {
         toast({ variant: 'destructive', title: 'Erreur', description: `La question #${questions.indexOf(q) + 1} est vide.` });
         return;
@@ -211,6 +206,8 @@ export default function QuizAdminPanel() {
         return;
       }
     }
+
+    setIsSaving(true);
     
     const quizDataToSave: NewQuizData = {
       ...formData,
@@ -227,29 +224,31 @@ export default function QuizAdminPanel() {
         delete quizDataToSave.scheduledFor;
     }
 
-    setIsSaving(true);
-    
-    const savePromise = editingQuiz
-        ? updateQuizInFirestore(editingQuiz.id!, quizDataToSave as Partial<Quiz>)
-        : saveQuizToFirestore(quizDataToSave);
+    try {
+      if (editingQuiz) {
+        await updateQuizInFirestore(editingQuiz.id!, quizDataToSave as Partial<Quiz>);
+      } else {
+        await saveQuizToFirestore(quizDataToSave);
+      }
+      
+      toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
+      
+      // Use a timeout to ensure state updates before fetching new data
+      setTimeout(() => {
+        handleCloseDialog();
+        fetchQuizzes();
+      }, 50);
 
-    savePromise.then(() => {
-        toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
-        // Use timeout to prevent race condition on closing dialog
-        setTimeout(() => {
-            handleCloseDialog();
-            fetchQuizzes();
-        }, 50);
-    }).catch(error => {
-        toast({
-            variant: 'destructive',
-            title: 'Erreur d\'enregistrement',
-            description: 'Une erreur est survenue lors de la sauvegarde du quiz.',
-        });
-    }).finally(() => {
-        setIsSaving(false);
-    });
-  }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur d\'enregistrement',
+        description: 'Une erreur est survenue lors de la sauvegarde du quiz.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   const handleDeleteQuiz = async (id: string) => {
     try {
@@ -267,34 +266,36 @@ export default function QuizAdminPanel() {
 
     setIsGenerating(true);
     try {
-        const result: GenerateQuizOutput = await generateQuiz({ topic });
-        const { quiz } = result;
+      const result: GenerateQuizOutput = await generateQuiz({ topic });
+      const { quiz } = result;
 
-        setValue('title', quiz.title);
-        setValue('description', quiz.description);
-        setValue('category', quiz.category);
-        setValue('difficulty', quiz.difficulty);
-        setValue('duration_minutes', quiz.duration_minutes);
-        setValue('isMockExam', false); // Always reset this
-        setValue('scheduledFor', undefined);
-        
-        setQuestions((quiz.questions || []).map(q => ({
-            id: crypto.randomUUID(),
-            question: q.question,
-            options: q.options.map(opt => ({ id: crypto.randomUUID(), value: opt })),
-            correctAnswers: q.correctAnswers,
-            explanation: q.explanation || '',
-        })));
-        
-        toast({ title: "Quiz généré !", description: `Un quiz sur "${topic}" a été créé. Veuillez le vérifier avant de l'enregistrer.`});
+      reset({
+        ...watch(),
+        title: quiz.title,
+        description: quiz.description,
+        category: quiz.category,
+        difficulty: quiz.difficulty,
+        duration_minutes: quiz.duration_minutes,
+        isMockExam: false,
+        scheduledFor: undefined,
+      });
+
+      setQuestions((quiz.questions || []).map(q => ({
+        id: crypto.randomUUID(),
+        question: q.question,
+        options: q.options.map(opt => ({ id: crypto.randomUUID(), value: opt })),
+        correctAnswers: q.correctAnswers,
+        explanation: q.explanation || '',
+      })));
+      
+      toast({ title: "Quiz généré !", description: `Un quiz sur "${topic}" a été créé. Veuillez le vérifier avant de l'enregistrer.`});
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Erreur de génération', description: "L'IA n'a pas pu générer le quiz." });
+      toast({ variant: 'destructive', title: 'Erreur de génération', description: "L'IA n'a pas pu générer le quiz." });
     } finally {
-        setIsGenerating(false);
+      setIsGenerating(false);
     }
   };
 
-  // Question handlers
   const handleAddQuestion = () => {
     setQuestions(prev => [...prev, { 
         id: crypto.randomUUID(), 
@@ -311,7 +312,7 @@ export default function QuizAdminPanel() {
   
   const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
     setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, [field]: value } : q));
-  }
+  };
 
   const handleAddOption = (questionId: string) => {
     setQuestions(prev => prev.map(q => 
@@ -330,7 +331,7 @@ export default function QuizAdminPanel() {
                 ...q,
                 options: q.options.filter(opt => opt.id !== optionId),
                 correctAnswers: newCorrectAnswers,
-            }
+            };
         }
         return q;
     }));
@@ -359,8 +360,7 @@ export default function QuizAdminPanel() {
         return q;
     }));
   };
-
-
+  
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -434,158 +434,154 @@ export default function QuizAdminPanel() {
         </CardContent>
       </Card>
       
-      <Dialog open={isDialogOpen} onOpenChange={onDialogClose}>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingQuiz ? 'Modifier le Quiz' : 'Créer un nouveau Quiz'}</DialogTitle>
             <DialogDescription>Remplissez les détails ci-dessous. Les champs marqués d'un * sont obligatoires.</DialogDescription>
           </DialogHeader>
-           <form onSubmit={form.handleSubmit(validateAndSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
+          <form onSubmit={handleSubmit(validateAndSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
             <div className="flex-1 overflow-y-auto pr-4 space-y-6">
                 
-                {/* Quiz Details Form */}
-                <Card className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="title">Titre *</Label>
-                      <Input {...register("title")} id="title" />
-                      {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="description">Description *</Label>
-                      <Input {...register("description")} id="description" />
-                      {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="category">Catégorie *</Label>
-                      <Input {...register("category")} id="category"/>
-                      {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Difficulté *</Label>
-                      <Controller
-                        name="difficulty"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue/></SelectTrigger>
-                            <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
-                          </Select>
-                        )}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Accès *</Label>
-                      <Controller
-                        name="access_type"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue/></SelectTrigger>
-                            <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
-                          </Select>
-                        )}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
-                      <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
-                      {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
-                    </div>
+              <Card className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="title">Titre *</Label>
+                    <Input {...register("title")} id="title" />
+                    {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
                   </div>
-                  <div className="flex items-center space-x-2 mt-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description">Description *</Label>
+                    <Input {...register("description")} id="description" />
+                    {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="category">Catégorie *</Label>
+                    <Input {...register("category")} id="category"/>
+                    {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Difficulté *</Label>
                     <Controller
-                      name="isMockExam"
+                      name="difficulty"
                       control={control}
-                      render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
+                        </Select>
+                      )}
                     />
-                    <Label htmlFor="isMockExam">Concours Blanc</Label>
                   </div>
-                  {isMockExam && (
-                    <div className="mt-4 space-y-1.5">
-                      <Label>Date de programmation</Label>
-                      <Controller
-                        name="scheduledFor"
-                        control={control}
-                        render={({ field }) => (
-                          <Input 
-                            type="datetime-local" 
-                            value={formatDateForInput(field.value)}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                          />
-                        )}
-                      />
-                      {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
-                    </div>
-                  )}
-                </Card>
-                
-                <hr/>
-                
-                {/* Questions Form */}
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold">Questions</h3>
-                        <div>
-                             <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
-                                {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
-                            </Button>
-                            <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
-                                <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
-                            </Button>
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        {questions.map((q, qIndex) => (
-                           <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
-                              <div className="flex justify-between items-center">
-                                <h4 className="font-bold">Question {qIndex + 1}</h4>
-                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
-                                    <Trash2 className="w-4 h-4"/>
-                                </Button>
-                              </div>
-                              <div>
-                                <Label>Texte de la question *</Label>
-                                <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
-                              </div>
-                              <div>
-                                <Label>Explication (optionnel)</Label>
-                                <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
-                              </div>
-                              <div>
-                                <Label>Options et Bonnes réponses *</Label>
-                                <div className="space-y-2 mt-1">
-                                    {q.options.map((option) => (
-                                        <div key={option.id} className="flex items-center gap-2">
-                                            <Checkbox
-                                              id={`correct-${option.id}`}
-                                              checked={q.correctAnswers.includes(option.value)}
-                                              onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
-                                              disabled={!option.value}
-                                            />
-                                            <Input 
-                                              value={option.value} 
-                                              onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
-                                              placeholder={`Option`} 
-                                            />
-                                            <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
-                              </div>
-                           </Card>
-                        ))}
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label>Accès *</Label>
+                    <Controller
+                      name="access_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
+                    <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
+                    {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
+                  </div>
                 </div>
+                <div className="flex items-center space-x-2 mt-4">
+                  <Controller
+                    name="isMockExam"
+                    control={control}
+                    render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}
+                  />
+                  <Label htmlFor="isMockExam">Concours Blanc</Label>
+                </div>
+                {isMockExam && (
+                  <div className="mt-4 space-y-1.5">
+                    <Label>Date de programmation</Label>
+                    <Controller
+                      name="scheduledFor"
+                      control={control}
+                      render={({ field }) => (
+                        <Input 
+                          type="datetime-local" 
+                          value={formatDateForInput(field.value)}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      )}
+                    />
+                    {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
+                  </div>
+                )}
+              </Card>
+
+              <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">Questions</h3>
+                      <div>
+                           <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
+                              {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
+                          </Button>
+                          <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
+                              <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
+                          </Button>
+                      </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                      {questions.map((q, qIndex) => (
+                         <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-bold">Question {qIndex + 1}</h4>
+                              <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
+                                  <Trash2 className="w-4 h-4"/>
+                              </Button>
+                            </div>
+                            <div>
+                              <Label>Texte de la question *</Label>
+                              <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
+                            </div>
+                            <div>
+                              <Label>Explication (optionnel)</Label>
+                              <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
+                            </div>
+                            <div>
+                              <Label>Options et Bonnes réponses *</Label>
+                              <div className="space-y-2 mt-1">
+                                  {q.options.map((option) => (
+                                      <div key={option.id} className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={`correct-${option.id}`}
+                                            checked={q.correctAnswers.includes(option.value)}
+                                            onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
+                                            disabled={!option.value}
+                                          />
+                                          <Input 
+                                            value={option.value} 
+                                            onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
+                                            placeholder={`Option`} 
+                                          />
+                                          <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
+                                      </div>
+                                  ))}
+                              </div>
+                              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
+                            </div>
+                         </Card>
+                      ))}
+                  </div>
+              </div>
             </div>
             
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSaving}>Annuler</Button>
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Enregistrement...</> : <><Save className="w-4 h-4 mr-2"/>Enregistrer</>}
-                </Button>
+              <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSaving}>Annuler</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Enregistrement...</> : <><Save className="w-4 h-4 mr-2"/>Enregistrer</>}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -20,10 +20,6 @@ export default function RootLayout({
     setIsClient(true);
   }, []);
 
-  if (!isClient) {
-    return null;
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -40,17 +36,23 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </AuthProvider>
+        {isClient ? (
+            <AuthProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                {children}
+                <Toaster />
+              </ThemeProvider>
+            </AuthProvider>
+        ) : (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-purple-500"></div>
+          </div>
+        )}
       </body>
     </html>
   );

@@ -3,20 +3,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, useFormContext } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  ClipboardList, PlusCircle, Trash2, Edit, Loader, Save, ArrowLeft, BrainCircuit, AlertCircle, X, Check
+  ClipboardList, PlusCircle, Trash2, Edit, Loader, Save, ArrowLeft, BrainCircuit, AlertCircle, Check, X
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Quiz, 
-  getQuizzesFromFirestore, 
+import {
+  Quiz,
+  getQuizzesFromFirestore,
   deleteQuizFromFirestore,
   saveQuizToFirestore,
   updateQuizInFirestore,
@@ -47,16 +47,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 
-
-// Zod Schema for robust validation
-const questionSchema = z.object({
-  question: z.string().min(1, "La question ne peut pas être vide."),
-  options: z.array(z.string()).min(2, "Il doit y avoir au moins 2 options."),
-  correctAnswers: z.array(z.string()).min(1, "Il doit y avoir au moins 1 bonne réponse."),
-  explanation: z.string().optional(),
-});
-
-const quizSchema = z.object({
+// Zod Schema for main form fields
+const quizDetailsSchema = z.object({
   title: z.string().min(1, "Le titre est requis."),
   description: z.string().min(1, "La description est requise."),
   category: z.string().min(1, "La catégorie est requise."),
@@ -65,13 +57,22 @@ const quizSchema = z.object({
   duration_minutes: z.coerce.number().min(1, "La durée doit être d'au moins 1 minute."),
   isMockExam: z.boolean(),
   scheduledFor: z.date().optional(),
-  questions: z.array(questionSchema).min(1, "Un quiz doit avoir au moins une question."),
 }).refine(data => !data.isMockExam || !!data.scheduledFor, {
   message: "Un concours blanc doit avoir une date de programmation.",
   path: ["scheduledFor"],
 });
 
-type QuizFormData = z.infer<typeof quizSchema>;
+type QuizDetailsFormData = z.infer<typeof quizDetailsSchema>;
+
+// Local state types for questions
+type Option = { id: string; value: string };
+type Question = {
+  id: string;
+  question: string;
+  options: Option[];
+  correctAnswers: string[]; // Stores the 'value' of correct options
+  explanation: string;
+};
 
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
@@ -80,11 +81,15 @@ export default function AdminQuizzesPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
 
-  const methods = useForm<QuizFormData>({
-    resolver: zodResolver(quizSchema),
+  // State for questions managed manually
+  const [questions, setQuestions] = useState<Question[]>([]);
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<QuizDetailsFormData>({
+    resolver: zodResolver(quizDetailsSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -93,15 +98,7 @@ export default function AdminQuizzesPage() {
       access_type: 'gratuit',
       duration_minutes: 15,
       isMockExam: false,
-      questions: [],
     },
-  });
-
-  const { control, register, handleSubmit, reset, watch, formState: { errors }, setValue } = methods;
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "questions"
   });
 
   const fetchQuizzes = useCallback(async () => {
@@ -119,15 +116,29 @@ export default function AdminQuizzesPage() {
   useEffect(() => {
     fetchQuizzes();
   }, [fetchQuizzes]);
-  
+
   const handleOpenDialog = (quiz?: Quiz) => {
     if (quiz) {
       setEditingQuiz(quiz);
       reset({
-        ...quiz,
-        duration_minutes: quiz.duration_minutes || 15,
+        title: quiz.title,
+        description: quiz.description,
+        category: quiz.category,
+        difficulty: quiz.difficulty,
+        access_type: quiz.access_type,
+        duration_minutes: quiz.duration_minutes,
+        isMockExam: quiz.isMockExam || false,
         scheduledFor: quiz.scheduledFor ? new Date(quiz.scheduledFor) : undefined,
       });
+      // Populate questions from existing quiz, ensuring stable IDs
+      setQuestions(quiz.questions.map(q => ({
+        id: crypto.randomUUID(),
+        question: q.question,
+        options: q.options.map(opt => ({ id: crypto.randomUUID(), value: opt })),
+        correctAnswers: q.correctAnswers,
+        explanation: q.explanation || '',
+      })));
+
     } else {
       setEditingQuiz(null);
       reset({
@@ -138,12 +149,12 @@ export default function AdminQuizzesPage() {
         access_type: 'gratuit',
         duration_minutes: 15,
         isMockExam: false,
-        questions: [],
       });
+      setQuestions([]);
     }
     setIsDialogOpen(true);
   };
-  
+
   const handleDeleteQuiz = async (id: string) => {
     try {
       await deleteQuizFromFirestore(id);
@@ -154,30 +165,119 @@ export default function AdminQuizzesPage() {
     }
   };
 
-  const onSubmit = async (data: QuizFormData) => {
+  const validateAndSubmit = (formData: QuizDetailsFormData) => {
+    // Manual validation for questions
+    if (questions.length === 0) {
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Un quiz doit avoir au moins une question.' });
+      return;
+    }
+    for (const q of questions) {
+      if (!q.question.trim()) {
+        toast({ variant: 'destructive', title: 'Erreur', description: `La question #${questions.indexOf(q) + 1} est vide.` });
+        return;
+      }
+      if (q.options.length < 2) {
+        toast({ variant: 'destructive', title: 'Erreur', description: `La question "${q.question}" doit avoir au moins 2 options.` });
+        return;
+      }
+      if (q.options.some(opt => !opt.value.trim())) {
+         toast({ variant: 'destructive', title: 'Erreur', description: `Une option est vide pour la question "${q.question}".` });
+        return;
+      }
+       if (q.correctAnswers.length === 0) {
+        toast({ variant: 'destructive', title: 'Erreur', description: `La question "${q.question}" doit avoir au moins une bonne réponse.` });
+        return;
+      }
+    }
+    
+    // Prepare data for Firestore
     const quizDataToSave = {
-        ...data,
-        total_questions: data.questions.length,
-        createdAt: editingQuiz ? editingQuiz.createdAt : new Date(),
+      ...formData,
+      questions: questions.map(q => ({
+        question: q.question,
+        options: q.options.map(opt => opt.value),
+        correctAnswers: q.correctAnswers,
+        explanation: q.explanation,
+      })),
+      total_questions: questions.length,
+      createdAt: editingQuiz ? editingQuiz.createdAt : new Date(),
     };
 
-    try {
-        if (editingQuiz) {
-            await updateQuizInFirestore(editingQuiz.id!, quizDataToSave);
-            toast({ title: 'Succès', description: 'Le quiz a été mis à jour.' });
-        } else {
-            await saveQuizToFirestore(quizDataToSave);
-            toast({ title: 'Succès', description: 'Le quiz a été ajouté.' });
-        }
+    setIsSaving(true);
+    const savePromise = editingQuiz
+        ? updateQuizInFirestore(editingQuiz.id!, quizDataToSave)
+        : saveQuizToFirestore(quizDataToSave);
+
+    savePromise.then(() => {
+        toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
         setIsDialogOpen(false);
         fetchQuizzes();
-    } catch (error) {
+    }).catch(error => {
         toast({
             variant: 'destructive',
             title: 'Erreur d\'enregistrement',
             description: 'Une erreur est survenue lors de la sauvegarde du quiz.',
         });
-    }
+        console.error("Save error: ", error);
+    }).finally(() => {
+        setIsSaving(false);
+    });
+  }
+  
+  // Question handlers
+  const handleAddQuestion = () => {
+    setQuestions([...questions, { 
+        id: crypto.randomUUID(), 
+        question: '', 
+        options: [{id: crypto.randomUUID(), value: ''}, {id: crypto.randomUUID(), value: ''}], 
+        correctAnswers: [], 
+        explanation: '' 
+    }]);
+  };
+
+  const handleRemoveQuestion = (questionId: string) => {
+    setQuestions(questions.filter(q => q.id !== questionId));
+  };
+  
+  const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
+    setQuestions(questions.map(q => q.id === questionId ? { ...q, [field]: value } : q));
+  }
+
+  // Option handlers
+  const handleAddOption = (questionId: string) => {
+    setQuestions(questions.map(q => 
+        q.id === questionId 
+            ? { ...q, options: [...q.options, {id: crypto.randomUUID(), value: ''}] } 
+            : q
+    ));
+  };
+  
+  const handleRemoveOption = (questionId: string, optionId: string) => {
+     setQuestions(questions.map(q => 
+        q.id === questionId 
+            ? { ...q, options: q.options.filter(opt => opt.id !== optionId) } 
+            : q
+    ));
+  };
+
+  const handleOptionChange = (questionId: string, optionId: string, value: string) => {
+    setQuestions(questions.map(q => 
+        q.id === questionId 
+            ? { ...q, options: q.options.map(opt => opt.id === optionId ? {...opt, value} : opt) } 
+            : q
+    ));
+  };
+
+  const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {
+    setQuestions(questions.map(q => {
+        if (q.id === questionId) {
+            const newCorrectAnswers = q.correctAnswers.includes(optionValue)
+                ? q.correctAnswers.filter(a => a !== optionValue)
+                : [...q.correctAnswers, optionValue];
+            return { ...q, correctAnswers: newCorrectAnswers };
+        }
+        return q;
+    }));
   };
   
   const handleGenerateQuiz = async () => {
@@ -189,13 +289,19 @@ export default function AdminQuizzesPage() {
         const result: GenerateQuizOutput = await generateQuiz({ topic });
         const { quiz } = result;
 
-        // Populate form with AI-generated data
         setValue('title', quiz.title);
         setValue('description', quiz.description);
         setValue('category', quiz.category);
         setValue('difficulty', quiz.difficulty);
         setValue('duration_minutes', quiz.duration_minutes);
-        setValue('questions', quiz.questions); // This replaces existing questions
+        
+        setQuestions(quiz.questions.map(q => ({
+            id: crypto.randomUUID(),
+            question: q.question,
+            options: q.options.map(opt => ({ id: crypto.randomUUID(), value: opt })),
+            correctAnswers: q.correctAnswers,
+            explanation: q.explanation || '',
+        })));
         
         toast({ title: "Quiz généré !", description: `Un quiz sur "${topic}" a été créé. Veuillez le vérifier avant de l'enregistrer.`});
     } catch (error) {
@@ -206,7 +312,7 @@ export default function AdminQuizzesPage() {
   };
 
   const isMockExam = watch("isMockExam");
-  
+
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -283,7 +389,7 @@ export default function AdminQuizzesPage() {
             <DialogTitle>{editingQuiz ? 'Modifier le Quiz' : 'Créer un nouveau Quiz'}</DialogTitle>
             <DialogDescription>Remplissez les détails ci-dessous. Les champs marqués d'un * sont obligatoires.</DialogDescription>
           </DialogHeader>
-           <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
+           <form onSubmit={handleSubmit(validateAndSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
             <div className="flex-1 overflow-y-auto pr-4 space-y-6">
                 {/* Quiz Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -295,7 +401,7 @@ export default function AdminQuizzesPage() {
                     <div><Label>Durée (minutes) *</Label><Input type="number" {...register("duration_minutes")} />{errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}</div>
                 </div>
 
-                <div className="flex items-center space-x-2"><Switch id="isMockExam" {...register("isMockExam")} /><Label htmlFor="isMockExam">Concours Blanc</Label></div>
+                <div className="flex items-center space-x-2"><Switch id="isMockExam" checked={watch('isMockExam')} onCheckedChange={(v) => setValue('isMockExam', v)} /><Label htmlFor="isMockExam">Concours Blanc</Label></div>
                 {isMockExam && <div><Label>Date de programmation</Label><Input type="datetime-local" {...register("scheduledFor", { valueAsDate: true })} />{errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}</div>}
                 
                 <hr/>
@@ -307,105 +413,82 @@ export default function AdminQuizzesPage() {
                              <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
                                 {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
                             </Button>
-                            <Button type="button" size="sm" className="ml-2" onClick={() => append({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}>
+                            <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
                                 <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
                             </Button>
                         </div>
                     </div>
-                    {errors.questions?.root && <p className="text-red-500 text-xs mt-1">{errors.questions.root.message}</p>}
                     
                     <div className="space-y-6">
-                        {fields.map((field, index) => (
-                          <QuestionCard key={field.id} index={index} remove={remove} />
+                        {questions.map((q, qIndex) => (
+                           <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
+                              <div className="flex justify-between items-center">
+                                <h4 className="font-bold">Question {qIndex + 1}</h4>
+                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
+                                    <Trash2 className="w-4 h-4"/>
+                                </Button>
+                              </div>
+                              <div>
+                                <Label>Texte de la question *</Label>
+                                <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
+                              </div>
+                              <div>
+                                <Label>Explication (optionnel)</Label>
+                                <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
+                              </div>
+                              <div>
+                                <Label>Options *</Label>
+                                <div className="space-y-2 mt-1">
+                                    {q.options.map((option, optIndex) => (
+                                        <div key={option.id} className="flex items-center gap-2">
+                                            <Input 
+                                              value={option.value} 
+                                              onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
+                                              placeholder={`Option ${optIndex + 1}`} 
+                                            />
+                                            <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
+                              </div>
+
+                              <div>
+                                <Label>Bonnes réponses *</Label>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                    {q.options.map((option) => (
+                                        option.value && (
+                                            <div key={option.id} className="flex items-center space-x-2 p-2 bg-background rounded-md">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`${q.id}-${option.id}`}
+                                                    value={option.value}
+                                                    checked={q.correctAnswers.includes(option.value)}
+                                                    onChange={() => handleCorrectAnswerChange(q.id, option.value)}
+                                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                <Label htmlFor={`${q.id}-${option.id}`} className="flex-1 cursor-pointer">{option.value}</Label>
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                              </div>
+                           </Card>
                         ))}
                     </div>
                 </div>
             </div>
             
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
-                <Button type="submit"><Save className="w-4 h-4 mr-2"/>Enregistrer</Button>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>Annuler</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Enregistrement...</> : <><Save className="w-4 h-4 mr-2"/>Enregistrer</>}
+                </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
 
-// Sub-component for managing a single question
-function QuestionCard({ index, remove }: { index: number, remove: (index: number) => void }) {
-  const { register, control, watch, setValue, formState: { errors } } = useFormContext<QuizFormData>();
-  const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({
-    control,
-    name: `questions.${index}.options`
-  });
-
-  const questionErrors = errors.questions?.[index];
-
-  const handleCorrectAnswerChange = (option: string) => {
-    const currentCorrectAnswers = watch(`questions.${index}.correctAnswers`) || [];
-    const newCorrectAnswers = currentCorrectAnswers.includes(option)
-      ? currentCorrectAnswers.filter(a => a !== option)
-      : [...currentCorrectAnswers, option];
-    setValue(`questions.${index}.correctAnswers`, newCorrectAnswers, { shouldValidate: true });
-  };
-  
-  const options = watch(`questions.${index}.options`);
-  const correctAnswers = watch(`questions.${index}.correctAnswers`);
-
-  return (
-    <Card className="bg-muted/50 p-4 space-y-3">
-        <div className="flex justify-between items-center">
-            <h4 className="font-bold">Question {index + 1}</h4>
-            <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => remove(index)}>
-                <Trash2 className="w-4 h-4"/>
-            </Button>
-        </div>
-        <div>
-            <Label>Texte de la question *</Label>
-            <Textarea {...register(`questions.${index}.question`)} />
-            {questionErrors?.question && <p className="text-red-500 text-xs mt-1">{questionErrors.question.message}</p>}
-        </div>
-        <div>
-            <Label>Explication (optionnel)</Label>
-            <Textarea {...register(`questions.${index}.explanation`)} />
-        </div>
-        
-        <div>
-            <Label>Options *</Label>
-             {questionErrors?.options?.root && <p className="text-red-500 text-xs mt-1">{questionErrors.options.root.message}</p>}
-            <div className="space-y-2 mt-1">
-                {optionFields.map((field, optionIndex) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                        <Input {...register(`questions.${index}.options.${optionIndex}`)} placeholder={`Option ${optionIndex + 1}`} />
-                        <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => removeOption(optionIndex)}><X className="w-4 h-4"/></Button>
-                    </div>
-                ))}
-            </div>
-            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendOption('')}>Ajouter Option</Button>
-        </div>
-
-        <div>
-            <Label>Bonnes réponses *</Label>
-            {questionErrors?.correctAnswers && <p className="text-red-500 text-xs mt-1">{questionErrors.correctAnswers.message}</p>}
-            <div className="grid grid-cols-2 gap-2 mt-1">
-                {options.map((option, optionIndex) => (
-                    option && (
-                        <div key={optionIndex} className="flex items-center space-x-2 p-2 bg-background rounded-md">
-                            <input
-                                type="checkbox"
-                                id={`q${index}-opt${optionIndex}`}
-                                value={option}
-                                checked={correctAnswers?.includes(option)}
-                                onChange={() => handleCorrectAnswerChange(option)}
-                            />
-                            <Label htmlFor={`q${index}-opt${optionIndex}`} className="flex-1 cursor-pointer">{option}</Label>
-                        </div>
-                    )
-                ))}
-            </div>
-        </div>
-    </Card>
-  )
-}
+    

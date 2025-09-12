@@ -62,6 +62,25 @@ export interface LibraryDocument {
 
 export type LibraryDocumentFormData = Omit<LibraryDocument, 'id' | 'createdAt'>;
 
+export const deleteQuizFromFirestore = async (quizId: string) => {
+    try {
+        await deleteDoc(doc(db, "quizzes", quizId));
+    } catch (e) {
+        console.error("Error deleting quiz: ", e);
+        throw new Error("Could not delete quiz");
+    }
+};
+
+export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Quiz>) => {
+    try {
+        const quizDocRef = doc(db, 'quizzes', quizId);
+        await updateDoc(quizDocRef, quizData);
+    } catch (e) {
+        console.error("Error updating quiz: ", e);
+        throw new Error("Could not update quiz");
+    }
+}
+
 
 export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
   try {

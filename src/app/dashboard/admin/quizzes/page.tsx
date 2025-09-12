@@ -1,11 +1,13 @@
 // src/app/dashboard/admin/quizzes/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller, useWatch, Control, UseFormRegister } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,34 +20,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Loader, Wand2, Copy, Save, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { BrainCircuit, Loader, Wand2, Save, PlusCircle, Trash2, ArrowLeft, Edit, ListManage } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { saveQuizToFirestore, Quiz } from '@/lib/firestore.service';
+import { saveQuizToFirestore, Quiz, getQuizzesFromFirestore, deleteQuizFromFirestore, updateQuizInFirestore } from '@/lib/firestore.service';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const manualQuestionSchema = z.object({
   question: z.string().min(1, 'La question ne peut pas être vide.'),
-  options: z.array(
-    z.object({ 
-      text: z.string().min(1, "L'option ne peut pas être vide."),
-    })
-  ).min(2, 'Au moins deux options sont requises.'),
+  options: z.array(z.string().min(1, "L'option ne peut pas être vide.")).min(2, 'Au moins deux options sont requises.'),
   correctAnswers: z.array(z.string()).min(1, 'Au moins une bonne réponse est requise.'),
   explanation: z.string().optional(),
 });
 
-const manualQuizSchema = z.object({
+const quizFormSchema = z.object({
   title: z.string().min(1, 'Le titre est requis.'),
   description: z.string().min(1, 'La description est requise.'),
   category: z.string().min(1, 'La catégorie est requise.'),
-  duration: z.number().min(1, 'La durée doit être d\'au moins 1 minute.'),
+  duration_minutes: z.preprocess((a) => parseInt(z.string().parse(a), 10), z.number().min(1, "La durée doit être d'au moins 1 minute.")),
   difficulty: z.enum(['facile', 'moyen', 'difficile']),
-  access: z.enum(['gratuit', 'premium']),
+  access_type: z.enum(['gratuit', 'premium']),
   isMockExam: z.boolean(),
   scheduledFor: z.string().optional(),
   questions: z.array(manualQuestionSchema).min(1, 'Au moins une question est requise.'),
@@ -54,86 +66,7 @@ const manualQuizSchema = z.object({
     path: ["scheduledFor"],
 });
 
-type ManualQuizFormValues = z.infer<typeof manualQuizSchema>;
-
-// New component for a single question card
-const ManualQuestionCard = ({
-  qIndex,
-  control,
-  register,
-  removeQuestion,
-  errors,
-  watch,
-}: {
-  qIndex: number;
-  control: Control<ManualQuizFormValues>;
-  register: UseFormRegister<ManualQuizFormValues>;
-  removeQuestion: (index: number) => void;
-  errors: any;
-  watch: any;
-}) => {
-  const { fields: options, append: appendOption, remove: removeOption } = useFieldArray({
-    control,
-    name: `questions.${qIndex}.options`,
-  });
-
-  const questionOptions = watch(`questions.${qIndex}.options`);
-
-  return (
-    <Card className="p-4 bg-background/50">
-      <div className="flex justify-between items-start mb-2">
-        <Label className="font-semibold">Question {qIndex + 1}</Label>
-        <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeQuestion(qIndex)}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-      <div className="space-y-3">
-        <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
-        {errors.questions?.[qIndex]?.question && (
-          <p className="text-sm text-red-500">{errors.questions[qIndex]?.question?.message}</p>
-        )}
-
-        <Label className="text-xs text-muted-foreground">Options (cochez la ou les bonnes réponses)</Label>
-        {errors.questions?.[qIndex]?.correctAnswers && (
-          <p className="text-sm text-red-500">{errors.questions[qIndex]?.correctAnswers.message}</p>
-        )}
-
-        {options.map((opt, optIndex) => (
-          <div key={opt.id} className="flex items-center gap-2">
-            <Controller
-              control={control}
-              name={`questions.${qIndex}.correctAnswers`}
-              render={({ field }) => (
-                <Checkbox
-                  checked={field.value?.includes(questionOptions?.[optIndex]?.text || '')}
-                  onCheckedChange={(checked) => {
-                    const optionText = questionOptions?.[optIndex]?.text;
-                    if (!optionText) return;
-                    return checked
-                      ? field.onChange([...(field.value || []), optionText])
-                      : field.onChange(field.value?.filter((value) => value !== optionText));
-                  }}
-                />
-              )}
-            />
-            <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}.text`)} />
-            <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        ))}
-        {errors.questions?.[qIndex]?.options && <p className="text-sm text-red-500">Veuillez remplir toutes les options.</p>}
-
-        <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ text: '' })}>
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Ajouter une option
-        </Button>
-        <Textarea placeholder="Explication de la bonne réponse (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
-      </div>
-    </Card>
-  );
-};
-
+type QuizFormValues = z.infer<typeof quizFormSchema>;
 
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
@@ -145,40 +78,50 @@ export default function AdminQuizzesPage() {
     competitionType: '',
     numberOfQuestions: 10,
     difficulty: 'moyen' as 'facile' | 'moyen' | 'difficile',
-    access: 'gratuit' as 'gratuit' | 'premium',
-    isMockExam: false,
-    scheduledFor: '',
-    category: '',
     isLoading: false,
-    isSaving: false,
   });
 
   const [generatedQuiz, setGeneratedQuiz] = useState<GenerateQuizOutput | null>(null);
   
-  // Manual Form setup with react-hook-form
-    const { register, control, handleSubmit, watch, formState: { errors } } = useForm<ManualQuizFormValues>({
-        resolver: zodResolver(manualQuizSchema),
-        defaultValues: {
-            title: '',
-            description: '',
-            category: '',
-            duration: 15,
-            difficulty: 'moyen',
-            access: 'gratuit',
-            isMockExam: false,
-            scheduledFor: '',
-            questions: [{ question: '', options: [{text: ''}, {text: ''}], correctAnswers: [], explanation: '' }],
-        },
-    });
+  // Quiz list state
+  const [allQuizzes, setAllQuizzes] = useState<Quiz[]>([]);
+  const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
 
-    const { fields: manualQuestions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
-        control,
-        name: "questions",
-    });
+  const fetchQuizzes = useCallback(async () => {
+    setIsLoadingQuizzes(true);
+    try {
+      const quizzes = await getQuizzesFromFirestore();
+      setAllQuizzes(quizzes);
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Impossible de charger les quiz.',
+      });
+    } finally {
+      setIsLoadingQuizzes(false);
+    }
+  }, [toast]);
+  
+  useEffect(() => {
+    fetchQuizzes();
+  }, [fetchQuizzes]);
+
+
+  // Edit Form setup with react-hook-form
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<QuizFormValues>({
+      resolver: zodResolver(quizFormSchema),
+  });
+
+  const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
+      control,
+      name: "questions",
+  });
     
-    const watchIsManualMockExam = watch('isMockExam');
-    const [isSavingManual, setIsSavingManual] = useState(false);
-
+  const watchIsMockExam = watch('isMockExam');
+  const watchQuestions = watch('questions');
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,10 +145,24 @@ export default function AdminQuizzesPage() {
         difficulty: generatorState.difficulty 
       });
       setGeneratedQuiz(result);
-       setGeneratorState(prev => ({...prev, category: prev.topic}));
+      // Reset form with generated data
+       reset({
+        ...result.quiz,
+        category: generatorState.topic,
+        duration_minutes: result.quiz.questions.length * 1.5,
+        difficulty: generatorState.difficulty,
+        access_type: 'gratuit',
+        isMockExam: false,
+        scheduledFor: '',
+        questions: result.quiz.questions.map(q => ({
+          ...q,
+          options: q.options,
+        })),
+      });
+
       toast({
         title: 'Quiz généré !',
-        description: 'Votre quiz a été créé avec succès pour validation.',
+        description: 'Votre quiz a été créé avec succès. Vous pouvez le sauvegarder.',
       });
     } catch (error) {
       console.error('Error generating quiz:', error);
@@ -219,91 +176,68 @@ export default function AdminQuizzesPage() {
     }
   };
   
-  const handleSaveAiQuiz = async () => {
-    if (!generatedQuiz) return;
-     if (generatorState.isMockExam && !generatorState.scheduledFor) {
-      toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez définir une date pour le concours blanc.' });
-      return;
-    }
-    setGeneratorState(prev => ({...prev, isSaving: true}));
+  const handleOpenEditDialog = (quiz: Quiz) => {
+    setEditingQuiz(quiz);
+    const scheduledFor = quiz.scheduledFor ? format(new Date(quiz.scheduledFor), "yyyy-MM-dd'T'HH:mm") : '';
+    reset({
+      ...quiz,
+      duration_minutes: quiz.duration_minutes,
+      questions: quiz.questions.map(q => ({...q, options: q.options})),
+      scheduledFor,
+    });
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleDeleteQuiz = async (quizId: string) => {
     try {
-      const quizDataToSave: Omit<Quiz, 'id'> = {
-        ...generatedQuiz.quiz,
-        category: generatorState.category || generatorState.topic,
-        difficulty: generatorState.difficulty,
-        access_type: generatorState.access,
-        duration_minutes: generatorState.numberOfQuestions * 1.5,
-        total_questions: generatedQuiz.quiz.questions.length,
-        createdAt: new Date(),
-        isMockExam: generatorState.isMockExam,
-        ...(generatorState.isMockExam && generatorState.scheduledFor && { scheduledFor: new Date(generatorState.scheduledFor) }),
-      };
-      
-      await saveQuizToFirestore(quizDataToSave);
-
+      await deleteQuizFromFirestore(quizId);
       toast({
-          title: 'Quiz Sauvegardé !',
-          description: 'Le quiz est maintenant disponible pour les utilisateurs.',
+        title: 'Succès',
+        description: 'Le quiz a été supprimé.',
       });
-      setGeneratedQuiz(null);
-      setGeneratorState(prev => ({
-        ...prev,
-        topic: '',
-        competitionType: '',
-        category: '',
-        isSaving: false,
-      }));
+      fetchQuizzes(); // Refresh list
     } catch (error) {
-      console.error("Error saving quiz: ", error);
-      toast({
+       toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Impossible de supprimer le quiz.',
+      });
+    }
+  }
+  
+  const onSubmitQuiz = async (data: QuizFormValues) => {
+    try {
+        const quizDataToSave: Omit<Quiz, 'id'> = {
+            ...data,
+            total_questions: data.questions.length,
+            createdAt: editingQuiz ? editingQuiz.createdAt : new Date(),
+            ...(data.isMockExam && data.scheduledFor && { scheduledFor: new Date(data.scheduledFor) }),
+        };
+
+        if (editingQuiz?.id) {
+           await updateQuizInFirestore(editingQuiz.id, quizDataToSave);
+           toast({ title: 'Succès', description: 'Le quiz a été mis à jour.' });
+        } else {
+           await saveQuizToFirestore(quizDataToSave);
+           toast({ title: 'Succès', description: 'Le quiz a été sauvegardé.' });
+        }
+        
+        fetchQuizzes();
+        setIsEditDialogOpen(false);
+        setEditingQuiz(null);
+        setGeneratedQuiz(null);
+        reset({ title: '', description: '', category: '', duration_minutes: 15, difficulty: 'moyen', access_type: 'gratuit', isMockExam: false, questions: [] });
+
+    } catch (error) {
+       console.error("Error saving quiz: ", error);
+       toast({
           variant: 'destructive',
           title: 'Erreur de sauvegarde',
           description: 'Le quiz n\'a pas pu être sauvegardé.',
       });
-    } finally {
-       setGeneratorState(prev => ({...prev, isSaving: false}));
     }
   }
 
-  const onSaveManualQuiz = async (data: ManualQuizFormValues) => {
-    setIsSavingManual(true);
-    try {
-        const manualQuizToSave: Omit<Quiz, 'id'> = {
-            title: data.title,
-            description: data.description,
-            category: data.category,
-            difficulty: data.difficulty,
-            access_type: data.access,
-            duration_minutes: data.duration,
-            createdAt: new Date(),
-            isMockExam: data.isMockExam,
-            questions: data.questions.map(q => ({
-                question: q.question,
-                options: q.options.map(o => o.text),
-                correctAnswers: q.correctAnswers,
-                explanation: q.explanation
-            })),
-            total_questions: data.questions.length,
-            ...(data.isMockExam && data.scheduledFor && { scheduledFor: new Date(data.scheduledFor) }),
-        };
-
-        await saveQuizToFirestore(manualQuizToSave);
-         toast({
-            title: 'Quiz Sauvegardé !',
-            description: 'Le quiz manuel a été ajouté avec succès.',
-        });
-        // Reset form can be done here if needed
-    } catch (error) {
-       console.error("Error saving manual quiz: ", error);
-       toast({
-          variant: 'destructive',
-          title: 'Erreur de sauvegarde',
-          description: 'Le quiz manuel n\'a pas pu être sauvegardé.',
-      });
-    } finally {
-        setIsSavingManual(false);
-    }
-  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -321,7 +255,7 @@ export default function AdminQuizzesPage() {
                 Gestion des Quiz
               </h1>
               <p className="text-sm sm:text-base text-gray-600 font-medium">
-                Générez automatiquement ou créez manuellement des quiz.
+                Générez, créez, modifiez ou supprimez des quiz.
               </p>
             </div>
           </div>
@@ -332,18 +266,19 @@ export default function AdminQuizzesPage() {
         </Button>
       </div>
       
-      <Tabs defaultValue="ai_generator">
+      <Tabs defaultValue="creator">
         <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai_generator"><Wand2 className="mr-2 h-4 w-4" />Génération Automatique</TabsTrigger>
-            <TabsTrigger value="manual_creator"><PlusCircle className="mr-2 h-4 w-4" />Ajouter Manuellement</TabsTrigger>
+            <TabsTrigger value="creator"><Wand2 className="mr-2 h-4 w-4" />Créateur de Quiz</TabsTrigger>
+            <TabsTrigger value="manager"><ListManage className="mr-2 h-4 w-4" />Gérer les Quiz</TabsTrigger>
         </TabsList>
-        <TabsContent value="ai_generator">
+
+        <TabsContent value="creator">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
                 <div className="lg:col-span-1">
                     <Card className="glassmorphism shadow-xl sticky top-24">
                         <CardHeader>
-                            <CardTitle>Paramètres de Génération</CardTitle>
-                            <CardDescription>Définissez les options pour générer votre quiz.</CardDescription>
+                            <CardTitle>Génération par IA</CardTitle>
+                            <CardDescription>Définissez les options pour générer un quiz.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleGenerateQuiz} className="space-y-4">
@@ -354,12 +289,12 @@ export default function AdminQuizzesPage() {
                                         placeholder="Ex: Histoire du Burkina Faso"
                                         value={generatorState.topic}
                                         onChange={(e) => setGeneratorState(prev => ({...prev, topic: e.target.value}))}
-                                        disabled={generatorState.isLoading || generatorState.isSaving}
+                                        disabled={generatorState.isLoading || isSubmitting}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="competitionType">Type de concours</Label>
-                                    <Select onValueChange={(value) => setGeneratorState(prev => ({...prev, competitionType: value}))} value={generatorState.competitionType} disabled={generatorState.isLoading || generatorState.isSaving}>
+                                    <Select onValueChange={(value) => setGeneratorState(prev => ({...prev, competitionType: value}))} value={generatorState.competitionType} disabled={generatorState.isLoading || isSubmitting}>
                                         <SelectTrigger id="competitionType">
                                         <SelectValue placeholder="Sélectionner un type" />
                                         </SelectTrigger>
@@ -379,12 +314,12 @@ export default function AdminQuizzesPage() {
                                             onChange={(e) => setGeneratorState(prev => ({...prev, numberOfQuestions: parseInt(e.target.value, 10) || 1}))}
                                             min="1"
                                             max="50"
-                                            disabled={generatorState.isLoading || generatorState.isSaving}
+                                            disabled={generatorState.isLoading || isSubmitting}
                                         />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="difficulty">Difficulté</Label>
-                                        <Select onValueChange={(v: 'facile' | 'moyen' | 'difficile') => setGeneratorState(prev => ({...prev, difficulty: v}))} value={generatorState.difficulty} disabled={generatorState.isLoading || generatorState.isSaving}>
+                                        <Select onValueChange={(v: 'facile' | 'moyen' | 'difficile') => setGeneratorState(prev => ({...prev, difficulty: v}))} value={generatorState.difficulty} disabled={generatorState.isLoading || isSubmitting}>
                                             <SelectTrigger id="difficulty"><SelectValue/></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="facile">Facile</SelectItem>
@@ -395,209 +330,401 @@ export default function AdminQuizzesPage() {
                                     </div>
                                 </div>
 
-                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={generatorState.isLoading || generatorState.isSaving || !generatorState.topic || !generatorState.competitionType}>
-                                    {generatorState.isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération en cours... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer le Quiz </>)}
+                                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold" disabled={generatorState.isLoading || isSubmitting || !generatorState.topic || !generatorState.competitionType}>
+                                    {generatorState.isLoading ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Génération... </>) : (<> <Wand2 className="mr-2 h-4 w-4" /> Générer avec IA</>)}
                                 </Button>
                             </form>
                         </CardContent>
                     </Card>
                 </div>
                 <div className="lg:col-span-2">
-                    <Card className="glassmorphism shadow-xl min-h-[60vh]">
+                   <form onSubmit={handleSubmit(onSubmitQuiz)}>
+                     <Card className="glassmorphism shadow-xl">
                         <CardHeader>
-                            <CardTitle>Résultat</CardTitle>
-                            <CardDescription>Le quiz généré apparaîtra ici pour validation.</CardDescription>
+                            <CardTitle>{editingQuiz ? 'Modifier le Quiz' : (generatedQuiz ? 'Quiz Généré' : 'Créer un Quiz Manuel')}</CardTitle>
+                            <CardDescription>Remplissez les détails ci-dessous. Vous pouvez aussi générer le contenu avec l'IA.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            {generatorState.isLoading && (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
-                                    <BrainCircuit className="w-16 h-16 text-purple-400 animate-pulse" />
-                                    <p className="mt-4 text-lg font-semibold text-gray-600">Analyse et création en cours...</p>
-                                    <p className="text-sm text-gray-500">Génération des questions.</p>
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="title">Titre du Quiz</Label>
+                                    <Input id="title" placeholder="Ex: Les capitales du monde" {...register("title")} />
+                                    {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
                                 </div>
-                            )}
-                            {generatedQuiz?.quiz && (
-                                <div className="space-y-6">
-                                    <div className="p-4 border rounded-lg bg-white/50 dark:bg-black/20">
-                                        <h2 className="text-xl font-bold">{generatedQuiz.quiz.title}</h2>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">{generatedQuiz.quiz.description}</p>
-                                    </div>
-                                    <Accordion type="single" collapsible className="w-full">
-                                        {generatedQuiz.quiz.questions.map((q, index) => (
-                                        <AccordionItem value={`item-${index}`} key={index}>
-                                            <AccordionTrigger className="font-semibold text-left hover:no-underline"> Question {index + 1}: {q.question} </AccordionTrigger>
-                                            <AccordionContent>
-                                                <div className="space-y-2 pl-4">
-                                                    {q.options.map((opt, i) => (<p key={i} className={`p-2 rounded-md text-sm ${ q.correctAnswers.includes(opt) ? 'bg-green-100 dark:bg-green-800/30 text-green-800 dark:text-green-300 font-bold' : 'bg-gray-100 dark:bg-gray-800/50' }`}> {opt} </p>))}
-                                                    {q.explanation && ( <div className="mt-2 p-2 text-xs rounded-lg bg-blue-50 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300"> <strong>Explication :</strong> {q.explanation} </div>)}
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="category">Catégorie</Label>
+                                    <Input id="category" placeholder="Ex: Culture générale" {...register("category")} />
+                                    {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="description">Description du Quiz</Label>
+                                <Textarea id="description" placeholder="Une brève description du quiz" {...register("description")} />
+                                {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
+                            </div>
+                            
+                            <Accordion type="single" collapsible className="w-full" defaultValue='item-1'>
+                                <AccordionItem value="item-1">
+                                    <AccordionTrigger>Options du Quiz</AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="space-y-4 p-1">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                 <Controller
+                                                    control={control}
+                                                    name="difficulty"
+                                                    render={({ field }) => (
+                                                        <div className="space-y-1.5">
+                                                            <Label>Difficulté</Label>
+                                                            <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                                                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="facile">Facile</SelectItem>
+                                                                    <SelectItem value="moyen">Moyen</SelectItem>
+                                                                    <SelectItem value="difficile">Difficile</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    )}
+                                                />
+                                                 <Controller
+                                                    control={control}
+                                                    name="access_type"
+                                                    render={({ field }) => (
+                                                        <div className="space-y-1.5">
+                                                            <Label>Accès</Label>
+                                                            <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                                                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="gratuit">Gratuit</SelectItem>
+                                                                    <SelectItem value="premium">Premium</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    )}
+                                                />
+                                                <div className="space-y-1.5">
+                                                    <Label htmlFor="duration_minutes">Durée (minutes)</Label>
+                                                    <Input id="duration_minutes" type="number" {...register("duration_minutes")} disabled={isSubmitting} />
+                                                    {errors.duration_minutes && <p className="text-sm text-red-500">{errors.duration_minutes.message}</p>}
                                                 </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                        ))}
-                                    </Accordion>
-                                     <div className="space-y-4 p-4 border rounded-lg">
-                                        <h3 className="font-semibold mb-2">Options de sauvegarde</h3>
-                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                             <div className="space-y-1.5">
-                                                  <Label htmlFor="ai_quiz_category">Catégorie</Label>
-                                                  <Input id="ai_quiz_category" placeholder="Ex: Histoire" value={generatorState.category} onChange={e => setGeneratorState(prev => ({...prev, category: e.target.value}))} />
-                                             </div>
-                                            <div className="space-y-1.5">
-                                                <Label>Accès</Label>
-                                                <Select onValueChange={(v: 'gratuit' | 'premium') => setGeneratorState(prev => ({...prev, access: v}))} defaultValue={generatorState.access}>
-                                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="gratuit">Gratuit</SelectItem>
-                                                        <SelectItem value="premium">Premium</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
                                             </div>
-                                        </div>
-                                         <div className="flex items-center space-x-2 pt-4">
-                                            <Switch id="mock-exam-switch" checked={generatorState.isMockExam} onCheckedChange={(checked) => setGeneratorState(prev => ({...prev, isMockExam: checked}))} />
-                                            <Label htmlFor="mock-exam-switch">Définir comme Concours Blanc</Label>
-                                        </div>
-                                        {generatorState.isMockExam && (
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="scheduledFor">Date et heure de début</Label>
-                                                <Input id="scheduledFor" type="datetime-local" value={generatorState.scheduledFor} onChange={e => setGeneratorState(prev => ({...prev, scheduledFor: e.target.value}))} />
+                                            <div className="flex items-center space-x-2 pt-4">
+                                                <Controller
+                                                    control={control}
+                                                    name="isMockExam"
+                                                    render={({ field }) => (
+                                                        <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                                                    )}
+                                                />
+                                                <Label htmlFor="isMockExam">Définir comme Concours Blanc</Label>
                                             </div>
-                                        )}
-                                     </div>
-                                    <div className="flex gap-4">
-                                    <Button onClick={handleSaveAiQuiz} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={generatorState.isSaving}>
-                                        {generatorState.isSaving ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="mr-2 h-4 w-4" /> Enregistrer ce quiz </>)}
-                                    </Button>
-                                    </div>
-                                </div>
-                            )}
-                            {!generatorState.isLoading && !generatedQuiz && (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center">
-                                    <Wand2 className="w-16 h-16 text-gray-300" />
-                                    <p className="mt-4 text-lg font-semibold text-gray-600">En attente de génération</p>
-                                    <p className="text-sm text-gray-500">Utilisez le formulaire pour créer un nouveau quiz.</p>
-                                </div>
-                            )}
+                                            {watchIsMockExam && (
+                                                <div className="space-y-1.5">
+                                                    <Label htmlFor="scheduledFor">Date et heure de début</Label>
+                                                    <Input id="scheduledFor" type="datetime-local" {...register("scheduledFor")} disabled={isSubmitting} />
+                                                    {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                                <AccordionItem value="item-2">
+                                     <AccordionTrigger>Questions ({questions.length})</AccordionTrigger>
+                                     <AccordionContent>
+                                         <div className="space-y-4 p-1">
+                                             {questions.map((question, qIndex) => (
+                                                <Card key={question.id} className="p-4 bg-background/50">
+                                                  <div className="flex justify-between items-start mb-2">
+                                                    <Label className="font-semibold">Question {qIndex + 1}</Label>
+                                                    <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeQuestion(qIndex)} disabled={isSubmitting}>
+                                                      <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                  </div>
+                                                  <div className="space-y-3">
+                                                    <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} disabled={isSubmitting} />
+                                                    {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
+                                                    
+                                                    <Label className="text-xs text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
+                                                    {(watchQuestions[qIndex]?.options || []).map((opt, optIndex) => (
+                                                      <div key={optIndex} className="flex items-center gap-2">
+                                                        <Controller
+                                                          control={control}
+                                                          name={`questions.${qIndex}.correctAnswers`}
+                                                          render={({ field }) => (
+                                                            <Checkbox
+                                                              checked={field.value?.includes(watchQuestions[qIndex].options[optIndex])}
+                                                              onCheckedChange={(checked) => {
+                                                                const optionText = watchQuestions[qIndex].options[optIndex];
+                                                                if (!optionText) return;
+                                                                return checked
+                                                                  ? field.onChange([...(field.value || []), optionText])
+                                                                  : field.onChange(field.value?.filter((value) => value !== optionText));
+                                                              }}
+                                                              disabled={isSubmitting}
+                                                            />
+                                                          )}
+                                                        />
+                                                        <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} disabled={isSubmitting}/>
+                                                        <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => {
+                                                            const currentOptions = watch(`questions.${qIndex}.options`);
+                                                            const newOptions = currentOptions.filter((_, i) => i !== optIndex);
+                                                            const fieldArrayName = `questions.${qIndex}.options` as const;
+                                                            reset({ ...watch(), [fieldArrayName]: newOptions });
+                                                        }} disabled={isSubmitting}>
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                      </div>
+                                                    ))}
+
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                                                        const currentOptions = watch(`questions.${qIndex}.options`);
+                                                        const newOptions = [...currentOptions, ''];
+                                                        const fieldArrayName = `questions.${qIndex}.options` as const;
+                                                        reset({ ...watch(), [fieldArrayName]: newOptions });
+                                                    }} disabled={isSubmitting}>
+                                                      <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
+                                                    </Button>
+                                                    <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} disabled={isSubmitting}/>
+                                                  </div>
+                                                </Card>
+                                             ))}
+                                              <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })} disabled={isSubmitting}>
+                                                <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
+                                            </Button>
+                                            {errors.questions && <p className="text-sm text-red-500">{errors.questions.message || errors.questions.root?.message}</p>}
+                                         </div>
+                                     </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                           
+                            <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting}>
+                                {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> {editingQuiz ? 'Mettre à jour le quiz' : 'Enregistrer le quiz'}</>)}
+                            </Button>
                         </CardContent>
-                    </Card>
+                     </Card>
+                   </form>
                 </div>
             </div>
         </TabsContent>
-        <TabsContent value="manual_creator">
-           <form onSubmit={handleSubmit(onSaveManualQuiz)}>
-               <Card className="glassmorphism shadow-xl mt-4">
-                 <CardHeader>
-                    <CardTitle>Créateur de Quiz Manuel</CardTitle>
-                    <CardDescription>Composez votre propre quiz, question par question.</CardDescription>
-                 </CardHeader>
-                 <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="manual_title">Titre du Quiz</Label>
-                            <Input id="manual_title" placeholder="Ex: Les capitales du monde" {...register("title")} />
-                             {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
-                        </div>
-                         <div className="space-y-1.5">
-                            <Label htmlFor="manual_category">Catégorie</Label>
-                            <Input id="manual_category" placeholder="Ex: Culture générale" {...register("category")} />
-                             {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
-                        </div>
-                    </div>
-                     <div className="space-y-1.5">
-                        <Label htmlFor="manual_description">Description du Quiz</Label>
-                        <Textarea id="manual_description" placeholder="Une brève description du quiz" {...register("description")} />
-                        {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
-                    </div>
-                     <div className="space-y-4 p-4 border rounded-lg">
-                        <h3 className="font-semibold mb-2">Options du quiz</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Controller
-                                control={control}
-                                name="difficulty"
-                                render={({ field }) => (
-                                    <div className="space-y-1.5">
-                                        <Label>Difficulté</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger><SelectValue/></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="facile">Facile</SelectItem>
-                                                <SelectItem value="moyen">Moyen</SelectItem>
-                                                <SelectItem value="difficile">Difficile</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                            />
-                            <Controller
-                                control={control}
-                                name="access"
-                                render={({ field }) => (
-                                    <div className="space-y-1.5">
-                                        <Label>Accès</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger><SelectValue/></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="gratuit">Gratuit</SelectItem>
-                                                <SelectItem value="premium">Premium</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                            />
-                            <div className="space-y-1.5">
-                                <Label htmlFor="manual_duration">Durée (minutes)</Label>
-                                <Input id="manual_duration" type="number" {...register("duration", { valueAsNumber: true })} />
-                                {errors.duration && <p className="text-sm text-red-500">{errors.duration.message}</p>}
-                            </div>
-                        </div>
-                        <div className="flex items-center space-x-2 pt-4">
-                             <Controller
-                                control={control}
-                                name="isMockExam"
-                                render={({ field }) => (
-                                     <Switch id="manual-mock-exam" checked={field.value} onCheckedChange={field.onChange} />
-                                )}
-                            />
-                            <Label htmlFor="manual-mock-exam">Définir comme Concours Blanc</Label>
-                        </div>
-                        {watchIsManualMockExam && (
-                            <div className="space-y-1.5">
-                                <Label htmlFor="manual_scheduledFor">Date et heure de début</Label>
-                                <Input id="manual_scheduledFor" type="datetime-local" {...register("scheduledFor")} />
-                                 {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
-                            </div>
-                        )}
-                     </div>
-
-                    <div className="border-t pt-6 space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-semibold">Questions</h3>
-                            <Button type="button" variant="outline" size="sm" onClick={() => appendQuestion({ question: '', options: [{ text: '' }, { text: '' }], correctAnswers: [], explanation: '' })}><PlusCircle className="w-4 h-4 mr-2" />Ajouter une question</Button>
-                        </div>
-                         {errors.questions?.root && <p className="text-sm text-red-500">{errors.questions.root.message}</p>}
-                         
-                         {manualQuestions.map((question, qIndex) => (
-                           <ManualQuestionCard 
-                             key={question.id}
-                             qIndex={qIndex}
-                             control={control}
-                             register={register}
-                             removeQuestion={removeQuestion}
-                             errors={errors}
-                             watch={watch}
-                           />
-                         ))}
-
-                    </div>
-
-                    <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSavingManual}>
-                        {isSavingManual ? (<> <Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde... </>) : (<> <Save className="w-4 h-4" /> Enregistrer le quiz manuel</>)}
-                    </Button>
-                 </CardContent>
-               </Card>
-           </form>
+        <TabsContent value="manager">
+             <Card className="glassmorphism shadow-xl mt-4">
+                <CardHeader>
+                  <CardTitle>Quiz Existants</CardTitle>
+                  <CardDescription>
+                    {allQuizzes.length} quiz sont actuellement dans la base de données.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                   {isLoadingQuizzes ? (
+                      <div className="flex justify-center items-center h-64">
+                        <Loader className="w-10 h-10 animate-spin text-purple-500"/>
+                      </div>
+                   ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Titre</TableHead>
+                          <TableHead>Catégorie</TableHead>
+                          <TableHead>Difficulté</TableHead>
+                          <TableHead>Type</TableHead>
+                           <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allQuizzes.map((quiz) => (
+                          <TableRow key={quiz.id}>
+                            <TableCell className="font-medium">{quiz.title}</TableCell>
+                            <TableCell>{quiz.category}</TableCell>
+                            <TableCell><Badge variant="outline" className="capitalize">{quiz.difficulty}</Badge></TableCell>
+                            <TableCell><Badge variant={quiz.access_type === 'premium' ? 'destructive' : 'secondary'}>{quiz.access_type}</Badge></TableCell>
+                             <TableCell>{format(new Date(quiz.createdAt), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell className="flex gap-2 justify-end">
+                               <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(quiz)}>
+                                <Edit className="h-4 w-4" />
+                               </Button>
+                               <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Cette action est irréversible et supprimera le quiz définitivement.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteQuiz(quiz.id!)} className="bg-destructive hover:bg-destructive/90">
+                                        Supprimer
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                   )}
+                </CardContent>
+              </Card>
         </TabsContent>
       </Tabs>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) { setEditingQuiz(null); reset(); } setIsEditDialogOpen(isOpen); }}>
+             <DialogContent className="max-w-4xl h-[90vh]">
+                 <form onSubmit={handleSubmit(onSubmitQuiz)} className="flex flex-col h-full">
+                    <DialogHeader>
+                        <DialogTitle>Modifier le Quiz</DialogTitle>
+                        <DialogDescription>
+                        Modifiez les détails du quiz ci-dessous.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-grow overflow-y-auto pr-6 -mr-6 py-4 space-y-4">
+                        {/* Same form as creator tab */}
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="edit_title">Titre du Quiz</Label>
+                                    <Input id="edit_title" {...register("title")} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="edit_category">Catégorie</Label>
+                                    <Input id="edit_category" {...register("category")} />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="edit_description">Description du Quiz</Label>
+                                <Textarea id="edit_description" {...register("description")} />
+                            </div>
+                             <Accordion type="single" collapsible className="w-full" defaultValue='item-1'>
+                                <AccordionItem value="item-1">
+                                    <AccordionTrigger>Options du Quiz</AccordionTrigger>
+                                    <AccordionContent>
+                                         <div className="space-y-4 p-1">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                 <Controller
+                                                    control={control}
+                                                    name="difficulty"
+                                                    render={({ field }) => (
+                                                        <div className="space-y-1.5">
+                                                            <Label>Difficulté</Label>
+                                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="facile">Facile</SelectItem>
+                                                                    <SelectItem value="moyen">Moyen</SelectItem>
+                                                                    <SelectItem value="difficile">Difficile</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    )}
+                                                />
+                                                 <Controller
+                                                    control={control}
+                                                    name="access_type"
+                                                    render={({ field }) => (
+                                                        <div className="space-y-1.5">
+                                                            <Label>Accès</Label>
+                                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="gratuit">Gratuit</SelectItem>
+                                                                    <SelectItem value="premium">Premium</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    )}
+                                                />
+                                                <div className="space-y-1.5">
+                                                    <Label htmlFor="edit_duration_minutes">Durée (minutes)</Label>
+                                                    <Input id="edit_duration_minutes" type="number" {...register("duration_minutes")} />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2 pt-4">
+                                                <Controller control={control} name="isMockExam" render={({ field }) => ( <Switch id="edit_isMockExam" checked={field.value} onCheckedChange={field.onChange} /> )}/>
+                                                <Label htmlFor="edit_isMockExam">Définir comme Concours Blanc</Label>
+                                            </div>
+                                            {watchIsMockExam && (
+                                                <div className="space-y-1.5">
+                                                    <Label htmlFor="edit_scheduledFor">Date et heure de début</Label>
+                                                    <Input id="edit_scheduledFor" type="datetime-local" {...register("scheduledFor")} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                                 <AccordionItem value="item-2">
+                                     <AccordionTrigger>Questions ({questions.length})</AccordionTrigger>
+                                     <AccordionContent>
+                                          <div className="space-y-4 p-1">
+                                             {questions.map((question, qIndex) => (
+                                                <Card key={question.id} className="p-4 bg-background/50">
+                                                  <div className="flex justify-between items-start mb-2">
+                                                    <Label className="font-semibold">Question {qIndex + 1}</Label>
+                                                    <Button variant="ghost" size="icon" className="text-red-500 w-7 h-7" onClick={() => removeQuestion(qIndex)}><Trash2 className="w-4 h-4" /></Button>
+                                                  </div>
+                                                  <div className="space-y-3">
+                                                    <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
+                                                    <Label className="text-xs text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
+                                                    {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
+                                                    
+                                                    {(watchQuestions[qIndex]?.options || []).map((opt, optIndex) => (
+                                                      <div key={optIndex} className="flex items-center gap-2">
+                                                        <Controller
+                                                          control={control}
+                                                          name={`questions.${qIndex}.correctAnswers`}
+                                                          render={({ field }) => (
+                                                            <Checkbox
+                                                              checked={field.value?.includes(watchQuestions[qIndex].options[optIndex])}
+                                                              onCheckedChange={(checked) => {
+                                                                const optionText = watchQuestions[qIndex].options[optIndex];
+                                                                if (!optionText) return;
+                                                                return checked
+                                                                  ? field.onChange([...(field.value || []), optionText])
+                                                                  : field.onChange(field.value?.filter((value) => value !== optionText));
+                                                              }}
+                                                            />
+                                                          )}
+                                                        />
+                                                        <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}` as const)}/>
+                                                         <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => {
+                                                            const currentOptions = watch(`questions.${qIndex}.options`);
+                                                            const newOptions = currentOptions.filter((_, i) => i !== optIndex);
+                                                            const fieldArrayName = `questions.${qIndex}.options` as const;
+                                                            reset({ ...watch(), [fieldArrayName]: newOptions });
+                                                        }}><Trash2 className="w-4 h-4" /></Button>
+                                                      </div>
+                                                    ))}
+
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                                                        const currentOptions = watch(`questions.${qIndex}.options`);
+                                                        const newOptions = [...currentOptions, ''];
+                                                        const fieldArrayName = `questions.${qIndex}.options` as const;
+                                                        reset({ ...watch(), [fieldArrayName]: newOptions });
+                                                    }}><PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option</Button>
+                                                    <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
+                                                  </div>
+                                                </Card>
+                                             ))}
+                                              <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}><PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question</Button>
+                                         </div>
+                                     </AccordionContent>
+                                </AccordionItem>
+                             </Accordion>
+                    </div>
+                    <DialogFooter className="pt-4 border-t">
+                        <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>Annuler</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Sauvegarde...</> : <><Save className="w-4 h-4 mr-2"/>Mettre à jour</>}
+                        </Button>
+                    </DialogFooter>
+                 </form>
+             </DialogContent>
+        </Dialog>
     </div>
   );
 }

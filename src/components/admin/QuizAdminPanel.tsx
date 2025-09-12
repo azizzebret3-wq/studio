@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -88,6 +88,99 @@ const formatDateForInput = (date: Date | undefined): string => {
     }
 };
 
+// =================================================================
+// Quiz Details Form Component
+// =================================================================
+interface QuizDetailsFormProps {
+  form: UseFormReturn<QuizDetailsFormData>;
+}
+
+const QuizDetailsForm = memo(function QuizDetailsForm({ form }: QuizDetailsFormProps) {
+  const { register, control, watch, formState: { errors } } = form;
+  const isMockExam = watch("isMockExam");
+
+  return (
+    <Card className="p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="title">Titre *</Label>
+          <Input {...register("title")} id="title" />
+          {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="description">Description *</Label>
+          <Input {...register("description")} id="description" />
+          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="category">Catégorie *</Label>
+          <Input {...register("category")} id="category"/>
+          {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label>Difficulté *</Label>
+          <Controller
+            name="difficulty"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Accès *</Label>
+          <Controller
+            name="access_type"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
+          <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
+          {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
+        </div>
+      </div>
+      <div className="flex items-center space-x-2 mt-4">
+        <Controller
+          name="isMockExam"
+          control={control}
+          render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}
+        />
+        <Label htmlFor="isMockExam">Concours Blanc</Label>
+      </div>
+      {isMockExam && (
+        <div className="mt-4 space-y-1.5">
+          <Label>Date de programmation</Label>
+          <Controller
+            name="scheduledFor"
+            control={control}
+            render={({ field }) => (
+              <Input 
+                type="datetime-local" 
+                value={formatDateForInput(field.value)}
+                onChange={(e) => field.onChange(new Date(e.target.value))}
+              />
+            )}
+          />
+          {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
+        </div>
+      )}
+    </Card>
+  );
+});
+
+// =================================================================
+// Questions Form Component
+// =================================================================
 interface QuestionsFormProps {
   questions: Question[];
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
@@ -98,7 +191,7 @@ interface QuestionsFormProps {
 const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isGenerating, handleGenerateQuiz }: QuestionsFormProps) {
   
   const handleAddQuestion = () => {
-    setQuestions([...questions, { 
+    setQuestions(prev => [...prev, { 
         id: crypto.randomUUID(), 
         question: '', 
         options: [{id: crypto.randomUUID(), value: ''}, {id: crypto.randomUUID(), value: ''}], 
@@ -108,15 +201,15 @@ const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isG
   };
 
   const handleRemoveQuestion = (questionId: string) => {
-    setQuestions(questions.filter(q => q.id !== questionId));
+    setQuestions(prev => prev.filter(q => q.id !== questionId));
   };
   
   const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
-    setQuestions(questions.map(q => q.id === questionId ? { ...q, [field]: value } : q));
+    setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, [field]: value } : q));
   }
 
   const handleAddOption = (questionId: string) => {
-    setQuestions(questions.map(q => 
+    setQuestions(prev => prev.map(q => 
         q.id === questionId 
             ? { ...q, options: [...q.options, {id: crypto.randomUUID(), value: ''}] } 
             : q
@@ -124,7 +217,7 @@ const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isG
   };
   
   const handleRemoveOption = (questionId: string, optionId: string) => {
-     setQuestions(questions.map(q => {
+     setQuestions(prev => prev.map(q => {
         if (q.id === questionId) {
             const removedOption = q.options.find(opt => opt.id === optionId);
             const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== removedOption?.value);
@@ -139,10 +232,9 @@ const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isG
   };
 
   const handleOptionChange = (questionId: string, optionId: string, value: string) => {
-    const oldOptionValue = questions.find(q => q.id === questionId)?.options.find(opt => opt.id === optionId)?.value;
-    
-    setQuestions(questions.map(q => {
+    setQuestions(prev => prev.map(q => {
         if (q.id === questionId) {
+            const oldOptionValue = q.options.find(opt => opt.id === optionId)?.value;
             const newOptions = q.options.map(opt => opt.id === optionId ? {...opt, value} : opt);
             const newCorrectAnswers = q.correctAnswers.map(ans => ans === oldOptionValue ? value : ans);
             return { ...q, options: newOptions, correctAnswers: newCorrectAnswers };
@@ -152,7 +244,7 @@ const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isG
   };
 
   const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {
-    setQuestions(questions.map(q => {
+    setQuestions(prev => prev.map(q => {
         if (q.id === questionId) {
             const newCorrectAnswers = q.correctAnswers.includes(optionValue)
                 ? q.correctAnswers.filter(a => a !== optionValue)
@@ -224,6 +316,9 @@ const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isG
 });
 
 
+// =================================================================
+// Main Admin Panel Component
+// =================================================================
 export default function QuizAdminPanel() {
   const { toast } = useToast();
   const router = useRouter();
@@ -235,10 +330,9 @@ export default function QuizAdminPanel() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
 
-  // State for questions managed manually
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm<QuizDetailsFormData>({
+  const form = useForm<QuizDetailsFormData>({
     resolver: zodResolver(quizDetailsSchema),
     defaultValues: {
       title: '',
@@ -250,6 +344,8 @@ export default function QuizAdminPanel() {
       isMockExam: false,
     },
   });
+
+  const { reset, setValue } = form;
 
   const fetchQuizzes = useCallback(async () => {
     setIsLoading(true);
@@ -310,18 +406,16 @@ export default function QuizAdminPanel() {
   
   const handleCloseDialog = useCallback(() => {
     setIsDialogOpen(false);
-    // Delay resetting form to avoid flashes of empty content
-    setTimeout(resetAll, 300);
-  }, [resetAll]);
-
+  }, []);
+  
   const onDialogClose = (open: boolean) => {
     if (!open) {
       handleCloseDialog();
+      setTimeout(resetAll, 300);
     }
   }
 
   const validateAndSubmit = (formData: QuizDetailsFormData) => {
-    // Manual validation for questions
     if (questions.length === 0) {
       toast({ variant: 'destructive', title: 'Erreur', description: 'Un quiz doit avoir au moins une question.' });
       return;
@@ -345,7 +439,6 @@ export default function QuizAdminPanel() {
       }
     }
     
-    // Construct the object to save
     const quizDataToSave: NewQuizData = {
       ...formData,
       questions: questions.map(q => ({
@@ -369,12 +462,10 @@ export default function QuizAdminPanel() {
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
-        
         setTimeout(() => {
             handleCloseDialog();
             fetchQuizzes();
         }, 50);
-
     }).catch(error => {
         toast({
             variant: 'destructive',
@@ -410,7 +501,7 @@ export default function QuizAdminPanel() {
         setValue('category', quiz.category);
         setValue('difficulty', quiz.difficulty);
         setValue('duration_minutes', quiz.duration_minutes);
-        setValue('isMockExam', false); // Generated quiz is not a mock exam
+        setValue('isMockExam', false);
         setValue('scheduledFor', undefined);
         
         setQuestions((quiz.questions || []).map(q => ({
@@ -428,8 +519,6 @@ export default function QuizAdminPanel() {
         setIsGenerating(false);
     }
   };
-
-  const isMockExam = watch("isMockExam");
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -510,90 +599,13 @@ export default function QuizAdminPanel() {
             <DialogTitle>{editingQuiz ? 'Modifier le Quiz' : 'Créer un nouveau Quiz'}</DialogTitle>
             <DialogDescription>Remplissez les détails ci-dessous. Les champs marqués d'un * sont obligatoires.</DialogDescription>
           </DialogHeader>
-           <form onSubmit={handleSubmit(validateAndSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
+           <form onSubmit={form.handleSubmit(validateAndSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
             <div className="flex-1 overflow-y-auto pr-4 space-y-6">
-                {/* Quiz Details */}
-                <Card className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="title">Titre *</Label>
-                      <Input {...register("title")} id="title" />
-                      {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="description">Description *</Label>
-                      <Input {...register("description")} id="description" />
-                      {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="category">Catégorie *</Label>
-                      <Input {...register("category")} id="category"/>
-                      {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Difficulté *</Label>
-                      <Controller
-                          name="difficulty"
-                          control={control}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger><SelectValue/></SelectTrigger>
-                              <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
-                            </Select>
-                          )}
-                        />
-                    </div>
-                     <div className="space-y-1.5">
-                      <Label>Accès *</Label>
-                       <Controller
-                          name="access_type"
-                          control={control}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger><SelectValue/></SelectTrigger>
-                              <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
-                            </Select>
-                          )}
-                        />
-                    </div>
-                     <div className="space-y-1.5">
-                        <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
-                        <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
-                        {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
-                    </div>
-                </div>
-
-                <div className="flex items-center space-x-2 mt-4">
-                  <Controller
-                    name="isMockExam"
-                    control={control}
-                    render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}
-                  />
-                  <Label htmlFor="isMockExam">Concours Blanc</Label>
-                </div>
-
-                {isMockExam && (
-                    <div className="mt-4 space-y-1.5">
-                        <Label>Date de programmation</Label>
-                        <Controller
-                            name="scheduledFor"
-                            control={control}
-                            render={({ field }) => (
-                                <Input 
-                                    type="datetime-local" 
-                                    value={formatDateForInput(field.value)}
-                                    onChange={(e) => field.onChange(new Date(e.target.value))}
-                                />
-                            )}
-                        />
-                        {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
-                    </div>
-                )}
-                </Card>
-
+                
+                <QuizDetailsForm form={form} />
+                
                 <hr/>
                 
-                {/* Questions Section */}
                 <QuestionsForm
                   questions={questions}
                   setQuestions={setQuestions}

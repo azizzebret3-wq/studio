@@ -6,7 +6,8 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-interface UserData {
+export interface UserData {
+  uid: string;
   fullName?: string;
   email?: string;
   phone?: string;
@@ -14,6 +15,7 @@ interface UserData {
   photoURL?: string;
   role?: 'admin' | 'user';
   subscription_type?: 'premium' | 'gratuit';
+  createdAt: any;
 }
 
 interface AuthContextType {
@@ -35,9 +37,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc: DocumentSnapshot = await getDoc(userDocRef);
       if (userDoc.exists()) {
-        return userDoc.data() as UserData;
+        const data = userDoc.data();
+        return {
+          uid: user.uid,
+          fullName: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          competitionType: data.competitionType,
+          photoURL: user.photoURL,
+          role: data.role,
+          subscription_type: data.subscription_type,
+          createdAt: data.createdAt,
+        };
       } else {
-        return { email: user.email || '', role: 'user', subscription_type: 'gratuit' };
+        return null;
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -76,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

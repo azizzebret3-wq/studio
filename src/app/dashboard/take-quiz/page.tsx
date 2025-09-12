@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getQuizzesFromFirestore, Quiz, saveAttemptToFirestore } from '@/lib/firestore.service';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth.tsx';
 
 type ActiveQuiz = GenerateQuizOutput['quiz'] & { id?: string };
 
@@ -94,6 +94,9 @@ export default function TakeQuizPage() {
     const loadQuiz = async () => {
       setLoading(true);
       
+      const quizId = searchParams.get('id');
+      const source = searchParams.get('source');
+
       if (source === 'generated') {
         const quizData = sessionStorage.getItem('generatedQuiz');
         if (quizData) {
@@ -129,7 +132,7 @@ export default function TakeQuizPage() {
     };
 
     loadQuiz();
-  }, [quizId, source, router, toast]);
+  }, [router, toast, searchParams]);
   
   React.useEffect(() => {
     let timer: NodeJS.Timeout;

@@ -533,7 +533,7 @@ export default function Home() {
     }
   }, [user, loading, router, isClient]);
 
-  if (loading || !isClient || user) {
+  if (!isClient || loading || user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
         <div className="relative">

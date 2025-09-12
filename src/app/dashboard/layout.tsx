@@ -34,6 +34,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo';
 import WhatsAppFloat from '@/components/whatsapp-float';
+import TiktokFloat from '@/components/tiktok-float';
 
 const userNavItems = [
   { title: "Accueil", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
@@ -416,6 +417,7 @@ export default function DashboardLayout({
           {children}
         </main>
 
+        <TiktokFloat />
         <WhatsAppFloat />
         
          {/* Bottom mobile navigation */}

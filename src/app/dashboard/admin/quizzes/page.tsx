@@ -20,6 +20,7 @@ import {
   deleteQuizFromFirestore,
   saveQuizToFirestore,
   updateQuizInFirestore,
+  NewQuizData,
 } from '@/lib/firestore.service';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import {
@@ -191,8 +192,8 @@ export default function AdminQuizzesPage() {
       }
     }
     
-    // Construct the object to save, excluding createdAt for new quizzes.
-    const quizDataToSave = {
+    // Construct the object to save
+    const quizDataToSave: NewQuizData = {
       ...formData,
       questions: questions.map(q => ({
         question: q.question,
@@ -202,13 +203,17 @@ export default function AdminQuizzesPage() {
       })),
       total_questions: questions.length,
     };
+    
+    // Remove scheduledFor if it's not a mock exam
+    if (!quizDataToSave.isMockExam) {
+        delete quizDataToSave.scheduledFor;
+    }
 
     setIsSaving(true);
     
     const savePromise = editingQuiz
         ? updateQuizInFirestore(editingQuiz.id!, quizDataToSave)
-        // For new quizzes, pass the data without createdAt; the service will add it.
-        : saveQuizToFirestore(quizDataToSave as Omit<Quiz, 'id' | 'createdAt'>);
+        : saveQuizToFirestore(quizDataToSave);
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
@@ -269,11 +274,16 @@ export default function AdminQuizzesPage() {
   };
 
   const handleOptionChange = (questionId: string, optionId: string, value: string) => {
-    setQuestions(questions.map(q => 
-        q.id === questionId 
-            ? { ...q, options: q.options.map(opt => opt.id === optionId ? {...opt, value} : opt) } 
-            : q
-    ));
+    const oldOptionValue = questions.find(q => q.id === questionId)?.options.find(opt => opt.id === optionId)?.value;
+    
+    setQuestions(questions.map(q => {
+        if (q.id === questionId) {
+            const newOptions = q.options.map(opt => opt.id === optionId ? {...opt, value} : opt);
+            const newCorrectAnswers = q.correctAnswers.map(ans => ans === oldOptionValue ? value : ans);
+            return { ...q, options: newOptions, correctAnswers: newCorrectAnswers };
+        }
+        return q;
+    }));
   };
 
   const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {

@@ -62,6 +62,10 @@ export interface LibraryDocument {
 
 export type LibraryDocumentFormData = Omit<LibraryDocument, 'id' | 'createdAt'>;
 
+// Type for creating a new quiz. `id` and `createdAt` are handled by Firestore.
+export type NewQuizData = Omit<Quiz, 'id' | 'createdAt'>;
+
+
 export const deleteQuizFromFirestore = async (quizId: string) => {
     try {
         await deleteDoc(doc(db, "quizzes", quizId));
@@ -84,7 +88,7 @@ export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Qu
 }
 
 
-export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id' | 'createdAt'>) => {
+export const saveQuizToFirestore = async (quizData: NewQuizData) => {
   try {
     const docRef = await addDoc(collection(db, "quizzes"), {
         ...quizData,

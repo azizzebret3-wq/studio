@@ -12,14 +12,11 @@ import {
   Crown,
   Lock,
   Rocket,
-  BrainCircuit,
-  Wand2,
   Loader,
-  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -28,13 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { getQuizzesFromFirestore, Quiz } from '@/lib/firestore.service';
 
 export default function QuizzesPage() {
-  const { user, userData, loading: authLoading } = useAuth();
+  const { userData } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -46,14 +41,7 @@ export default function QuizzesPage() {
     difficulty: 'all',
     access: 'all',
   });
-
-  const [topic, setTopic] = useState('');
-  const [competitionType, setCompetitionType] = useState('');
-  const [numberOfQuestions, setNumberOfQuestions] = useState(10);
-  const [difficulty, setDifficulty] = useState('moyen');
-  const [isGenerating, setIsGenerating] = useState(false);
   
-  const canGenerate = userData?.role === 'admin' || userData?.subscription_type === 'premium';
   const isPremium = userData?.subscription_type === 'premium';
   const isAdmin = userData?.role === 'admin';
 
@@ -96,41 +84,6 @@ export default function QuizzesPage() {
   const accessTypes = ['all', 'gratuit', 'premium'];
 
 
-  const handleGenerateQuiz = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!topic || !competitionType) {
-      toast({
-        variant: 'destructive',
-        title: 'Champs manquants',
-        description: 'Veuillez renseigner un sujet et un type de concours.',
-      });
-      return;
-    }
-    
-    setIsGenerating(true);
-
-    try {
-      const result = await generateQuiz({ topic, competitionType, numberOfQuestions, difficulty });
-      sessionStorage.setItem('generatedQuiz', JSON.stringify(result));
-      toast({
-        title: 'Quiz généré !',
-        description: 'Votre quiz est prêt. Vous allez être redirigé...',
-      });
-      router.push('/dashboard/take-quiz?source=generated');
-
-    } catch (error) {
-      console.error('Error generating quiz:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erreur de génération',
-        description: 'Impossible de générer le quiz. Veuillez réessayer.',
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -144,105 +97,12 @@ export default function QuizzesPage() {
                 Tous les Quiz
               </h1>
               <p className="text-sm sm:text-base text-gray-600 font-medium">
-                Mettez-vous au défi ou générez un quiz sur-mesure.
+                Mettez-vous au défi avec notre sélection de quiz.
               </p>
             </div>
           </div>
         </div>
       </div>
-
-       <Card className="glassmorphism shadow-xl">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BrainCircuit className="w-5 h-5 text-white" />
-            </div>
-            <div>
-                <CardTitle className="text-xl font-bold text-foreground">Générateur de Quiz Intelligent</CardTitle>
-                <CardDescription className="text-sm">Créez des quiz sur-mesure en quelques secondes.</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {canGenerate ? (
-             <form onSubmit={handleGenerateQuiz} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
-                    <Label htmlFor="topic">Sujet</Label>
-                    <Input
-                        id="topic"
-                        placeholder="Ex: Droit constitutionnel"
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                        disabled={isGenerating}
-                    />
-                </div>
-                <div className="space-y-1.5">
-                    <Label htmlFor="competitionType">Type de concours</Label>
-                    <Select onValueChange={setCompetitionType} value={competitionType} disabled={isGenerating}>
-                        <SelectTrigger id="competitionType">
-                        <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="direct">Concours Direct</SelectItem>
-                        <SelectItem value="professionnel">Concours Professionnel</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="difficulty">Difficulté</Label>
-                  <Select onValueChange={setDifficulty} value={difficulty} disabled={isGenerating}>
-                    <SelectTrigger id="difficulty">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="facile">Facile</SelectItem>
-                      <SelectItem value="moyen">Moyen</SelectItem>
-                      <SelectItem value="difficile">Difficile</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="numberOfQuestions">Questions</Label>
-                  <Input
-                    id="numberOfQuestions"
-                    type="number"
-                    value={numberOfQuestions}
-                    onChange={(e) => setNumberOfQuestions(parseInt(e.target.value, 10))}
-                    min="1"
-                    max="50"
-                    disabled={isGenerating}
-                  />
-                </div>
-                 <Button type="submit" className="w-full h-10 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold xl:col-span-1" disabled={isGenerating || !topic || !competitionType}>
-                    {isGenerating ? (
-                        <>
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        Génération...
-                        </>
-                    ) : (
-                        <>
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        Générer
-                        </>
-                    )}
-                </Button>
-            </form>
-          ) : (
-            <Link href="/dashboard/premium" passHref>
-              <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 cursor-pointer transition-colors">
-                <div className="text-center md:text-left">
-                  <h3 className="font-bold text-yellow-800 dark:text-yellow-300">Accès Premium requis</h3>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-400">Le générateur de quiz intelligent est une fonctionnalité exclusive.</p>
-                </div>
-                <Button size="sm" className="mt-4 md:mt-0 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold shadow-lg">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Devenir Premium
-                </Button>
-              </div>
-            </Link>
-          )}
-        </CardContent>
-      </Card>
 
       <Card className="glassmorphism shadow-xl p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -357,7 +217,7 @@ export default function QuizzesPage() {
                     <ClipboardList className="w-10 h-10 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-600 mb-1">Aucun quiz trouvé</h3>
-                <p className="text-gray-500 text-sm">Essayez de modifier vos filtres ou créez-en un nouveau !</p>
+                <p className="text-gray-500 text-sm">Essayez de modifier vos filtres.</p>
             </div>
           )}
         </>

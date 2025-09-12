@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -67,6 +67,68 @@ const quizFormSchema = z.object({
 
 type QuizFormValues = z.infer<typeof quizFormSchema>;
 
+const QuestionCard = ({ qIndex, removeQuestion }: { qIndex: number; removeQuestion: (index: number) => void; }) => {
+    const { control, register, watch, formState: { errors } } = useFormContext<QuizFormValues>();
+    const { fields: options, append: appendOption, remove: removeOption } = useFieldArray({
+        control,
+        name: `questions.${qIndex}.options`,
+    });
+
+    return (
+        <Card className="p-4 bg-background/50 border">
+            <div className="flex justify-between items-start mb-2">
+            <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
+            <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
+                <Trash2 className="w-4 h-4" />
+            </Button>
+            </div>
+            <div className="space-y-4">
+            <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
+            {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex]?.question?.message}</p>}
+    
+            <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
+                {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.correctAnswers?.message}</p>}
+    
+                <div className="space-y-2">
+                {options.map((option, optIndex) => (
+                    <div key={option.id} className="flex items-center gap-2">
+                        <Controller
+                            control={control}
+                            name={`questions.${qIndex}.correctAnswers`}
+                            render={({ field }) => (
+                                <Checkbox
+                                    checked={field.value?.includes(watch(`questions.${qIndex}.options.${optIndex}.value`))}
+                                    onCheckedChange={(checked) => {
+                                        const optionValue = watch(`questions.${qIndex}.options.${optIndex}.value`);
+                                        if (optionValue === undefined || optionValue === null) return;
+                                        const newValue = checked
+                                            ? [...(field.value || []), optionValue]
+                                            : (field.value || []).filter((ans:string) => ans !== optionValue);
+                                        field.onChange(newValue);
+                                    }}
+                                />
+                            )}
+                        />
+                        <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}.value`)} />
+                        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)} disabled={options.length <= 2}>
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                ))}
+                </div>
+            </div>
+    
+            <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: "" })}>
+                <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
+            </Button>
+    
+            <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
+            </div>
+        </Card>
+    );
+};
+
 
 export default function AdminQuizzesPage() {
   const { toast } = useToast();
@@ -121,12 +183,14 @@ export default function AdminQuizzesPage() {
     questions: []
   };
 
-  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid, isDirty } } = useForm<QuizFormValues>({
+  const formMethods = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
       defaultValues: defaultFormValues,
       mode: 'onChange'
   });
 
+  const { control, handleSubmit, reset, formState: { errors, isSubmitting, isValid }, watch } = formMethods;
+  
   const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
       control,
       name: "questions",
@@ -400,7 +464,7 @@ export default function AdminQuizzesPage() {
                     </Card>
                 </div>
                 <div className="lg:col-span-2">
-                   <form onSubmit={handleSubmit(onSubmitQuiz)}>
+                  <form onSubmit={handleSubmit(onSubmitQuiz)}>
                      <Card className="glassmorphism shadow-xl">
                         <CardHeader>
                             <div className='flex justify-between items-center'>
@@ -420,18 +484,18 @@ export default function AdminQuizzesPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="title">Titre du Quiz</Label>
-                                    <Input id="title" placeholder="Ex: Les capitales du monde" {...register("title")} />
+                                    <Input id="title" placeholder="Ex: Les capitales du monde" {...formMethods.register("title")} />
                                     {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="category">Catégorie</Label>
-                                    <Input id="category" placeholder="Ex: Culture générale" {...register("category")} />
+                                    <Input id="category" placeholder="Ex: Culture générale" {...formMethods.register("category")} />
                                     {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
                                 </div>
                             </div>
                             <div className="space-y-1.5">
                                 <Label htmlFor="description">Description du Quiz</Label>
-                                <Textarea id="description" placeholder="Une brève description du quiz" {...register("description")} />
+                                <Textarea id="description" placeholder="Une brève description du quiz" {...formMethods.register("description")} />
                                 {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
                             </div>
                             
@@ -449,7 +513,7 @@ export default function AdminQuizzesPage() {
                                                  )} />
                                                 <div className="space-y-1.5">
                                                     <Label htmlFor="duration_minutes">Durée (minutes)</Label>
-                                                    <Input id="duration_minutes" type="number" {...register("duration_minutes")} />
+                                                    <Input id="duration_minutes" type="number" {...formMethods.register("duration_minutes")} />
                                                     {errors.duration_minutes && <p className="text-sm text-red-500">{errors.duration_minutes.message}</p>}
                                                 </div>
                                             </div>
@@ -460,7 +524,7 @@ export default function AdminQuizzesPage() {
                                             {watchIsMockExam && (
                                                 <div className="space-y-1.5">
                                                     <Label htmlFor="scheduledFor">Date et heure de début</Label>
-                                                    <Input id="scheduledFor" type="datetime-local" {...register("scheduledFor")} />
+                                                    <Input id="scheduledFor" type="datetime-local" {...formMethods.register("scheduledFor")} />
                                                     {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
                                                 </div>
                                             )}
@@ -472,65 +536,9 @@ export default function AdminQuizzesPage() {
                                      <AccordionContent>
                                         {errors.questions && !errors.questions.root && <p className="text-sm text-red-500 pb-2">{errors.questions.message}</p>}
                                          <div className="space-y-4 p-1">
-                                            {questions.map((question, qIndex) => {
-                                                const { fields: options, append: appendOption, remove: removeOption } = useFieldArray({
-                                                    control,
-                                                    name: `questions.${qIndex}.options`,
-                                                });
-                                                return (
-                                                    <Card key={question.id} className="p-4 bg-background/50 border">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                        <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
-                                                        <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                        </div>
-                                                        <div className="space-y-4">
-                                                        <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
-                                                        {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
-                                                
-                                                        <div className="space-y-2">
-                                                            <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
-                                                            {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.correctAnswers?.message}</p>}
-                                                
-                                                            <div className="space-y-2">
-                                                            {options.map((option, optIndex) => (
-                                                                <div key={option.id} className="flex items-center gap-2">
-                                                                    <Controller
-                                                                        control={control}
-                                                                        name={`questions.${qIndex}.correctAnswers`}
-                                                                        render={({ field }) => (
-                                                                            <Checkbox
-                                                                                checked={field.value?.includes(watch(`questions.${qIndex}.options.${optIndex}.value`))}
-                                                                                onCheckedChange={(checked) => {
-                                                                                    const optionValue = watch(`questions.${qIndex}.options.${optIndex}.value`);
-                                                                                    if (!optionValue) return;
-                                                                                    const newValue = checked
-                                                                                        ? [...(field.value || []), optionValue]
-                                                                                        : (field.value || []).filter((ans:string) => ans !== optionValue);
-                                                                                    field.onChange(newValue);
-                                                                                }}
-                                                                            />
-                                                                        )}
-                                                                    />
-                                                                    <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}.value`)} />
-                                                                    <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)} disabled={options.length <= 2}>
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            ))}
-                                                            </div>
-                                                        </div>
-                                                
-                                                        <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: "" })}>
-                                                            <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
-                                                        </Button>
-                                                
-                                                        <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
-                                                        </div>
-                                                    </Card>
-                                                );
-                                            })}
+                                            {questions.map((question, qIndex) => (
+                                                <QuestionCard key={question.id} qIndex={qIndex} removeQuestion={removeQuestion} />
+                                            ))}
                                             <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: [{value:''}, {value:''}], correctAnswers: [], explanation: '' })}>
                                                 <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
                                             </Button>

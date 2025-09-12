@@ -1,7 +1,7 @@
 // src/app/dashboard/admin/quizzes/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -68,7 +68,7 @@ type QuizDetailsFormData = z.infer<typeof quizDetailsSchema>;
 
 // Local state types for questions
 type Option = { id: string; value: string };
-type Question = {
+export type Question = {
   id: string;
   question: string;
   options: Option[];
@@ -88,6 +88,141 @@ const formatDateForInput = (date: Date | undefined): string => {
         return '';
     }
 };
+
+interface QuestionsFormProps {
+  questions: Question[];
+  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
+  isGenerating: boolean;
+  handleGenerateQuiz: () => Promise<void>;
+}
+
+const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isGenerating, handleGenerateQuiz }: QuestionsFormProps) {
+  
+  const handleAddQuestion = () => {
+    setQuestions([...questions, { 
+        id: crypto.randomUUID(), 
+        question: '', 
+        options: [{id: crypto.randomUUID(), value: ''}, {id: crypto.randomUUID(), value: ''}], 
+        correctAnswers: [], 
+        explanation: '' 
+    }]);
+  };
+
+  const handleRemoveQuestion = (questionId: string) => {
+    setQuestions(questions.filter(q => q.id !== questionId));
+  };
+  
+  const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
+    setQuestions(questions.map(q => q.id === questionId ? { ...q, [field]: value } : q));
+  }
+
+  const handleAddOption = (questionId: string) => {
+    setQuestions(questions.map(q => 
+        q.id === questionId 
+            ? { ...q, options: [...q.options, {id: crypto.randomUUID(), value: ''}] } 
+            : q
+    ));
+  };
+  
+  const handleRemoveOption = (questionId: string, optionId: string) => {
+     setQuestions(questions.map(q => {
+        if (q.id === questionId) {
+            const removedOption = q.options.find(opt => opt.id === optionId);
+            const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== removedOption?.value);
+            return {
+                ...q,
+                options: q.options.filter(opt => opt.id !== optionId),
+                correctAnswers: newCorrectAnswers,
+            }
+        }
+        return q;
+    }));
+  };
+
+  const handleOptionChange = (questionId: string, optionId: string, value: string) => {
+    const oldOptionValue = questions.find(q => q.id === questionId)?.options.find(opt => opt.id === optionId)?.value;
+    
+    setQuestions(questions.map(q => {
+        if (q.id === questionId) {
+            const newOptions = q.options.map(opt => opt.id === optionId ? {...opt, value} : opt);
+            const newCorrectAnswers = q.correctAnswers.map(ans => ans === oldOptionValue ? value : ans);
+            return { ...q, options: newOptions, correctAnswers: newCorrectAnswers };
+        }
+        return q;
+    }));
+  };
+
+  const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {
+    setQuestions(questions.map(q => {
+        if (q.id === questionId) {
+            const newCorrectAnswers = q.correctAnswers.includes(optionValue)
+                ? q.correctAnswers.filter(a => a !== optionValue)
+                : [...q.correctAnswers, optionValue];
+            return { ...q, correctAnswers: newCorrectAnswers };
+        }
+        return q;
+    }));
+  };
+
+  return (
+    <div className="space-y-4">
+        <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Questions</h3>
+            <div>
+                 <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
+                    {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
+                </Button>
+                <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
+                    <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
+                </Button>
+            </div>
+        </div>
+        
+        <div className="space-y-6">
+            {questions.map((q, qIndex) => (
+               <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold">Question {qIndex + 1}</h4>
+                    <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
+                        <Trash2 className="w-4 h-4"/>
+                    </Button>
+                  </div>
+                  <div>
+                    <Label>Texte de la question *</Label>
+                    <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Explication (optionnel)</Label>
+                    <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Options et Bonnes réponses *</Label>
+                    <div className="space-y-2 mt-1">
+                        {q.options.map((option) => (
+                            <div key={option.id} className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`correct-${q.id}-${option.id}`}
+                                  checked={q.correctAnswers.includes(option.value)}
+                                  onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
+                                  disabled={!option.value}
+                                />
+                                <Input 
+                                  value={option.value} 
+                                  onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
+                                  placeholder={`Option`} 
+                                />
+                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
+                            </div>
+                        ))}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
+                  </div>
+               </Card>
+            ))}
+        </div>
+    </div>
+  );
+});
 
 
 export default function AdminQuizzesPage() {
@@ -243,74 +378,6 @@ export default function AdminQuizzesPage() {
         setIsSaving(false);
     });
   }
-  
-  // Question handlers
-  const handleAddQuestion = () => {
-    setQuestions([...questions, { 
-        id: crypto.randomUUID(), 
-        question: '', 
-        options: [{id: crypto.randomUUID(), value: ''}, {id: crypto.randomUUID(), value: ''}], 
-        correctAnswers: [], 
-        explanation: '' 
-    }]);
-  };
-
-  const handleRemoveQuestion = (questionId: string) => {
-    setQuestions(questions.filter(q => q.id !== questionId));
-  };
-  
-  const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
-    setQuestions(questions.map(q => q.id === questionId ? { ...q, [field]: value } : q));
-  }
-
-  // Option handlers
-  const handleAddOption = (questionId: string) => {
-    setQuestions(questions.map(q => 
-        q.id === questionId 
-            ? { ...q, options: [...q.options, {id: crypto.randomUUID(), value: ''}] } 
-            : q
-    ));
-  };
-  
-  const handleRemoveOption = (questionId: string, optionId: string) => {
-     setQuestions(questions.map(q => {
-        if (q.id === questionId) {
-            const removedOption = q.options.find(opt => opt.id === optionId);
-            const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== removedOption?.value);
-            return {
-                ...q,
-                options: q.options.filter(opt => opt.id !== optionId),
-                correctAnswers: newCorrectAnswers,
-            }
-        }
-        return q;
-    }));
-  };
-
-  const handleOptionChange = (questionId: string, optionId: string, value: string) => {
-    const oldOptionValue = questions.find(q => q.id === questionId)?.options.find(opt => opt.id === optionId)?.value;
-    
-    setQuestions(questions.map(q => {
-        if (q.id === questionId) {
-            const newOptions = q.options.map(opt => opt.id === optionId ? {...opt, value} : opt);
-            const newCorrectAnswers = q.correctAnswers.map(ans => ans === oldOptionValue ? value : ans);
-            return { ...q, options: newOptions, correctAnswers: newCorrectAnswers };
-        }
-        return q;
-    }));
-  };
-
-  const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {
-    setQuestions(questions.map(q => {
-        if (q.id === questionId) {
-            const newCorrectAnswers = q.correctAnswers.includes(optionValue)
-                ? q.correctAnswers.filter(a => a !== optionValue)
-                : [...q.correctAnswers, optionValue];
-            return { ...q, correctAnswers: newCorrectAnswers };
-        }
-        return q;
-    }));
-  };
   
   const handleDeleteQuiz = async (id: string) => {
     try {
@@ -529,62 +596,12 @@ export default function AdminQuizzesPage() {
                 <hr/>
                 
                 {/* Questions Section */}
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold">Questions</h3>
-                        <div>
-                             <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
-                                {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
-                            </Button>
-                            <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
-                                <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
-                            </Button>
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        {questions.map((q, qIndex) => (
-                           <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
-                              <div className="flex justify-between items-center">
-                                <h4 className="font-bold">Question {qIndex + 1}</h4>
-                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
-                                    <Trash2 className="w-4 h-4"/>
-                                </Button>
-                              </div>
-                              <div>
-                                <Label>Texte de la question *</Label>
-                                <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
-                              </div>
-                              <div>
-                                <Label>Explication (optionnel)</Label>
-                                <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
-                              </div>
-                              <div>
-                                <Label>Options et Bonnes réponses *</Label>
-                                <div className="space-y-2 mt-1">
-                                    {q.options.map((option) => (
-                                        <div key={option.id} className="flex items-center gap-2">
-                                            <Checkbox
-                                              id={`correct-${q.id}-${option.id}`}
-                                              checked={q.correctAnswers.includes(option.value)}
-                                              onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
-                                              disabled={!option.value}
-                                            />
-                                            <Input 
-                                              value={option.value} 
-                                              onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
-                                              placeholder={`Option`} 
-                                            />
-                                            <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
-                              </div>
-                           </Card>
-                        ))}
-                    </div>
-                </div>
+                <QuestionsForm
+                  questions={questions}
+                  setQuestions={setQuestions}
+                  isGenerating={isGenerating}
+                  handleGenerateQuiz={handleGenerateQuiz}
+                />
             </div>
             
             <DialogFooter>

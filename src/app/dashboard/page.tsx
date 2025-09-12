@@ -21,7 +21,8 @@ import {
   Rocket,
   Loader,
   FileText,
-  Video
+  Video,
+  BrainCircuit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -223,7 +224,29 @@ export default function Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="glassmorphism shadow-xl card-hover border-0">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <BrainCircuit className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-foreground">Générateur de Quiz</CardTitle>
+                  <p className="text-muted-foreground font-medium text-sm">Créez un quiz sur n'importe quel sujet.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">Entraînez-vous sur un sujet spécifique en générant un quiz instantanément grâce à l'intelligence artificielle.</p>
+               <Link href="/dashboard/generate-quiz" passHref>
+                  <Button className="font-semibold rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Générer un Quiz
+                  </Button>
+                </Link>
+            </CardContent>
+          </Card>
           <Card className="glassmorphism shadow-xl card-hover border-0">
             <CardHeader>
               <div className="flex items-center gap-3">

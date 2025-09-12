@@ -14,7 +14,7 @@ import { getQuizzesFromFirestore, Quiz, saveAttemptToFirestore } from '@/lib/fir
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth.tsx';
 
-type ActiveQuiz = GenerateQuizOutput['quiz'] & { id?: string };
+type ActiveQuiz = Quiz;
 
 type QuestionResult = {
   question: string;
@@ -102,7 +102,7 @@ export default function TakeQuizPage() {
         if (quizData) {
           const parsedData: GenerateQuizOutput = JSON.parse(quizData);
           const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
-          setQuiz(activeQuiz);
+          setQuiz(activeQuiz as ActiveQuiz);
           setUserAnswers(Array(activeQuiz.questions.length).fill([]));
           setTimeLeft((activeQuiz.questions.length || 10) * 60); // 1 minute per question
         } else {

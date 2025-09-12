@@ -1,6 +1,6 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
 export interface Quiz {
@@ -74,7 +74,9 @@ export const deleteQuizFromFirestore = async (quizId: string) => {
 export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Quiz>) => {
     try {
         const quizDocRef = doc(db, 'quizzes', quizId);
-        await updateDoc(quizDocRef, quizData);
+        // Ensure createdAt is not overwritten
+        const { createdAt, ...restOfData } = quizData;
+        await updateDoc(quizDocRef, { ...restOfData });
     } catch (e) {
         console.error("Error updating quiz: ", e);
         throw new Error("Could not update quiz");
@@ -84,7 +86,10 @@ export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Qu
 
 export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
   try {
-    const docRef = await addDoc(collection(db, "quizzes"), quizData);
+    const docRef = await addDoc(collection(db, "quizzes"), {
+        ...quizData,
+        createdAt: serverTimestamp()
+    });
     console.log("Quiz document written with ID: ", docRef.id);
     return docRef.id;
   } catch (e) {

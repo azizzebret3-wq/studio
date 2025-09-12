@@ -3,48 +3,36 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the requesting user is an admin
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Users collection rules
+  
+    // Les utilisateurs peuvent lire leur propre document
     match /users/{userId} {
-      // Any authenticated user can view public user profiles
-      allow read: if request.auth != null;
-      // A user can create their own document or an admin can
-      allow create: if request.auth.uid == userId || isAdmin();
-      // A user can only update their own document, or an admin can
-      allow update: if request.auth.uid == userId || isAdmin();
-       // Only admins can delete users
-      allow delete: if isAdmin();
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Les administrateurs peuvent lire et écrire sur n'importe quel profil
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Quizzes collection rules
+    // Les administrateurs ont un accès complet aux quiz
     match /quizzes/{quizId} {
-      // Any authenticated user can read quizzes
       allow read: if request.auth != null;
-      // Only admins can write (create, update, delete) quizzes
-      allow write: if isAdmin();
-    }
-
-    // Documents collection rules
-    match /documents/{documentId} {
-       // Any authenticated user can read documents
-      allow read: if request.auth != null;
-       // Only admins can write (create, update, delete) documents
-      allow write: if isAdmin();
+      allow write, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Attempts collection rules
+    // Les administrateurs ont un accès complet à la bibliothèque
+    match /documents/{docId} {
+       allow read: if request.auth != null;
+       allow write, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Les utilisateurs peuvent créer des tentatives et ne lire que les leurs
     match /attempts/{attemptId} {
-      // A user can only read their own attempts
-      allow read: if request.auth.uid == resource.data.userId;
-       // An authenticated user can create their own attempt
-      allow create: if request.auth.uid == request.resource.data.userId;
-       // Attempts cannot be updated or deleted by clients
-      allow update, delete: if false;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Règle de secours : Refuser tout par défaut pour les autres collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

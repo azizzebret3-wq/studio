@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword } from "firebase/auth"
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"
 import { doc, setDoc, getDocs, collection, query, limit } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
@@ -69,14 +69,17 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Set user's display name
+      await updateProfile(user, { displayName: fullName });
+
       // Check if this is the first user
       const usersCollectionRef = collection(db, "users");
       const q = query(usersCollectionRef, limit(2)); // Check if more than 1 user exists
       const querySnapshot = await getDocs(q);
       
       let userRole = 'user';
-      // If there's only 1 user doc (the one we just created), it's the first.
-      if (querySnapshot.docs.length <= 1) {
+      // If there's only 1 user doc (the one we are about to create), it's the first.
+      if (querySnapshot.docs.length < 1) {
         userRole = 'admin';
         toast({
             title: "Super-utilisateur activé !",
@@ -109,7 +112,7 @@ export default function SignupPage() {
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Le mot de passe doit contenir au moins 6 caractères."
       } else if (error.code === 'auth/invalid-email') {
-         errorMessage = "Le format du numéro de téléphone est invalide."
+         errorMessage = "Le format du numéro de téléphone est invalide. Assurez-vous qu'il ne contient pas d'espaces ou de caractères spéciaux."
       }
       toast({
         variant: "destructive",
@@ -155,7 +158,7 @@ export default function SignupPage() {
                 <Input 
                   id="phone" 
                   type="tel" 
-                  placeholder="+226 XX XX XX XX" 
+                  placeholder="70112233" 
                   required 
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}

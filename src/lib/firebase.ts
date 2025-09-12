@@ -4,13 +4,15 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
+// !! IMPORTANT !!
+// COLLEZ L'OBJET DE CONFIGURATION DE VOTRE NOUVEAU PROJET FIREBASE ICI
 const firebaseConfig = {
-  apiKey: "AIzaSyCByDfHvT4IgtMd5ACXIOZVZw0lt2wCdmg",
-  authDomain: "concours-facile.firebaseapp.com",
-  projectId: "concours-facile",
-  storageBucket: "concours-facile.firebasestorage.app",
-  messagingSenderId: "95785864672",
-  appId: "1:95785864672:web:15beea9f0ba5accd90af85"
+  apiKey: "VOTRE_API_KEY",
+  authDomain: "VOTRE_AUTH_DOMAIN",
+  projectId: "VOTRE_PROJECT_ID",
+  storageBucket: "VOTRE_STORAGE_BUCKET",
+  messagingSenderId: "VOTRE_MESSAGING_SENDER_ID",
+  appId: "VOTRE_APP_ID"
 };
 
 

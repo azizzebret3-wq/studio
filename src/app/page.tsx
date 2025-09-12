@@ -521,19 +521,17 @@ function HomePageContent() {
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient && !loading && user) {
+    // This effect runs only on the client, after hydration.
+    if (!loading && user) {
       router.push("/dashboard");
     }
-  }, [user, loading, router, isClient]);
+  }, [user, loading, router]);
 
-  if (!isClient || loading || user) {
+  if (loading || user) {
+    // During load or for logged-in users, render a static placeholder.
+    // This matches the server render and avoids hydration mismatch.
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
         <div className="relative">
@@ -545,5 +543,6 @@ export default function Home() {
     );
   }
 
+  // Only render the full homepage content if the user is not logged in and loading is finished.
   return <HomePageContent />;
 }

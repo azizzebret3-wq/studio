@@ -67,73 +67,77 @@ const quizFormSchema = z.object({
 
 type QuizFormValues = z.infer<typeof quizFormSchema>;
 
-const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: any) => {
-    const { fields, append, remove } = useFieldArray({
-      control,
-      name: `questions.${qIndex}.options`
-    });
+const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion, getValues, setValue }: any) => {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `questions.${qIndex}.options`
+  });
 
-    const optionsWatch = useWatch({ control, name: `questions.${qIndex}.options`, defaultValue: [] });
-    
-    return (
-        <Card className="p-4 bg-background/50 border">
-          <div className="flex justify-between items-start mb-2">
-            <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
-            <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="space-y-4">
-            <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
-            {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
+  const handleCorrectAnswerChange = (optionValue: string, isChecked: boolean) => {
+    if (!optionValue) return;
+    const path = `questions.${qIndex}.correctAnswers`;
+    const currentCorrectAnswers: string[] = getValues(path) || [];
+    let newCorrectAnswers: string[];
+
+    if (isChecked) {
+      newCorrectAnswers = [...currentCorrectAnswers, optionValue];
+    } else {
+      newCorrectAnswers = currentCorrectAnswers.filter(ans => ans !== optionValue);
+    }
+    setValue(path, newCorrectAnswers, { shouldValidate: true, shouldDirty: true });
+  };
+  
+  // Watch correct answers to re-render checkboxes
+  const correctAnswers = useWatch({ control, name: `questions.${qIndex}.correctAnswers`, defaultValue: [] });
+
+  return (
+    <Card className="p-4 bg-background/50 border">
+      <div className="flex justify-between items-start mb-2">
+        <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
+        <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+      <div className="space-y-4">
+        <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
+        {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
+        
+        <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
+            {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
             
             <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
-                {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
-                
-                <Controller
-                    control={control}
-                    name={`questions.${qIndex}.correctAnswers`}
-                    defaultValue={[]}
-                    render={({ field: { onChange, value: correctAnswersValue = [] } }) => (
-                      <div className="space-y-2">
-                        {fields.map((field, optIndex) => {
-                          const optionValue = optionsWatch?.[optIndex] ?? '';
-                          return (
-                            <div key={field.id} className="flex items-center gap-2">
-                              <Checkbox
-                                  id={`correct-answer-${qIndex}-${optIndex}`}
-                                  checked={correctAnswersValue.includes(optionValue)}
-                                  onCheckedChange={(checked) => {
-                                      if (!optionValue) return;
-                                      const newValue = checked
-                                          ? [...correctAnswersValue, optionValue]
-                                          : correctAnswersValue.filter((v: string) => v !== optionValue);
-                                      onChange(newValue);
-                                  }}
-                                  disabled={!optionValue}
-                                />
-                              <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
-                              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
-                                  <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  />
+              {fields.map((field, optIndex) => {
+                const optionValue = getValues(`questions.${qIndex}.options.${optIndex}`);
+                return (
+                  <div key={field.id} className="flex items-center gap-2">
+                    <Checkbox
+                        id={`correct-answer-${qIndex}-${optIndex}`}
+                        checked={correctAnswers.includes(optionValue)}
+                        onCheckedChange={(checked) => {
+                           handleCorrectAnswerChange(optionValue, !!checked);
+                        }}
+                        disabled={!optionValue}
+                      />
+                    <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
+                    <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
+        </div>
 
-            <Button type="button" variant="outline" size="sm" onClick={() => append("")}>
-              <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
-            </Button>
-            
-            <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
-          </div>
-        </Card>
-    );
-  };
+        <Button type="button" variant="outline" size="sm" onClick={() => append("")}>
+          <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
+        </Button>
+        
+        <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
+      </div>
+    </Card>
+  );
+};
 
 
 export default function AdminQuizzesPage() {
@@ -189,7 +193,7 @@ export default function AdminQuizzesPage() {
     questions: []
   };
 
-  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid } } = useForm<QuizFormValues>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid }, getValues, setValue } = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
       defaultValues: defaultFormValues,
       mode: 'onChange' // Validate on change to update `isValid`
@@ -539,7 +543,7 @@ export default function AdminQuizzesPage() {
                                      <AccordionContent>
                                          <div className="space-y-4 p-1">
                                              {questions.map((question, qIndex) => (
-                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} register={register} errors={errors} removeQuestion={removeQuestion} />
+                                                <QuestionEditor key={question.id} qIndex={qIndex} control={control} register={register} errors={errors} removeQuestion={removeQuestion} getValues={getValues} setValue={setValue} />
                                              ))}
                                               <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}>
                                                 <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question

@@ -4,9 +4,13 @@
 import Link from 'next/link';
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="0" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M16.75 13.96c.27.13.42.42.31.71l-1.27 3.11a.5.5 0 0 1-.61.31l-2.4-1.2a1.5 1.5 0 0 0-1.08-.05l-1.93.97a.5.5 0 0 1-.57-.61l1.27-3.11a.5.5 0 0 1 .61-.31l2.4 1.2a1.5 1.5 0 0 0 1.08.05l1.93-.97a.5.5 0 0 1 .57.61zM11.5 9.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
-        <path fillRule="evenodd" clipRule="evenodd" d="M12 21a9 9 0 1 0-9-9 9 9 0 0 0 9 9zm0-19.5a10.5 10.5 0 1 0 10.5 10.5A10.5 10.5 0 0 0 12 1.5z"/>
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+        {...props}
+    >
+        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.487 5.235 3.487 8.413.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.89-5.451 0-9.887 4.434-9.889 9.884-.001 2.225.651 4.315 1.919 6.066l-1.225 4.485 4.574-1.196z"/>
     </svg>
 );
 
@@ -19,10 +23,10 @@ export default function WhatsAppFloat() {
             href={whatsAppGroupLink}
             target="_blank" 
             rel="noopener noreferrer"
-            className="fixed bottom-20 lg:bottom-6 right-6 z-50 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform duration-300 hover:scale-110"
+            className="fixed bottom-20 lg:bottom-6 right-5 z-50 bg-green-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform duration-300 hover:scale-110"
             title="Rejoindre le groupe WhatsApp"
         >
-            <WhatsAppIcon className="w-8 h-8" />
+            <WhatsAppIcon className="w-6 h-6" />
         </Link>
     );
 }

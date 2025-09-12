@@ -111,11 +111,11 @@ export default function AdminQuizzesPage() {
 
 
   // Edit Form setup with react-hook-form
-  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<QuizFormValues>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting }, setValue } = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
   });
 
-  const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
+  const { fields: questions, append: appendQuestion, remove: removeQuestion, update: updateQuestion } = useFieldArray({
       control,
       name: "questions",
   });
@@ -445,45 +445,56 @@ export default function AdminQuizzesPage() {
                                                     {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
                                                     
                                                     <Label className="text-xs text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
-                                                    {(watchQuestions[qIndex]?.options || []).map((opt, optIndex) => (
-                                                      <div key={optIndex} className="flex items-center gap-2">
-                                                        <Controller
-                                                          control={control}
-                                                          name={`questions.${qIndex}.correctAnswers`}
-                                                          render={({ field }) => (
-                                                            <Checkbox
-                                                              checked={field.value?.includes(watchQuestions[qIndex].options[optIndex])}
-                                                              onCheckedChange={(checked) => {
-                                                                const optionText = watchQuestions[qIndex].options[optIndex];
-                                                                if (!optionText) return;
-                                                                return checked
-                                                                  ? field.onChange([...(field.value || []), optionText])
-                                                                  : field.onChange(field.value?.filter((value) => value !== optionText));
-                                                              }}
-                                                              disabled={isSubmitting}
-                                                            />
-                                                          )}
-                                                        />
-                                                        <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} disabled={isSubmitting}/>
-                                                        <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => {
-                                                            const currentOptions = watch(`questions.${qIndex}.options`);
-                                                            const newOptions = currentOptions.filter((_, i) => i !== optIndex);
-                                                            const fieldArrayName = `questions.${qIndex}.options` as const;
-                                                            reset({ ...watch(), [fieldArrayName]: newOptions });
-                                                        }} disabled={isSubmitting}>
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                      </div>
-                                                    ))}
-
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                                                        const currentOptions = watch(`questions.${qIndex}.options`);
-                                                        const newOptions = [...currentOptions, ''];
-                                                        const fieldArrayName = `questions.${qIndex}.options` as const;
-                                                        reset({ ...watch(), [fieldArrayName]: newOptions });
-                                                    }} disabled={isSubmitting}>
-                                                      <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
-                                                    </Button>
+                                                    
+                                                    <Controller
+                                                        control={control}
+                                                        name={`questions.${qIndex}.options`}
+                                                        render={({ field }) => (
+                                                          <>
+                                                            {field.value.map((opt, optIndex) => (
+                                                              <div key={optIndex} className="flex items-center gap-2">
+                                                                <Controller
+                                                                  control={control}
+                                                                  name={`questions.${qIndex}.correctAnswers`}
+                                                                  render={({ field: correctAnswersField }) => (
+                                                                    <Checkbox
+                                                                      checked={correctAnswersField.value?.includes(opt)}
+                                                                      onCheckedChange={(checked) => {
+                                                                        const newCorrectAnswers = checked
+                                                                          ? [...(correctAnswersField.value || []), opt]
+                                                                          : (correctAnswersField.value || []).filter((value) => value !== opt);
+                                                                        correctAnswersField.onChange(newCorrectAnswers);
+                                                                      }}
+                                                                      disabled={isSubmitting}
+                                                                    />
+                                                                  )}
+                                                                />
+                                                                <Input 
+                                                                  placeholder={`Option ${optIndex + 1}`} 
+                                                                  value={opt}
+                                                                  onChange={(e) => {
+                                                                      const newOptions = [...field.value];
+                                                                      newOptions[optIndex] = e.target.value;
+                                                                      field.onChange(newOptions);
+                                                                  }}
+                                                                  disabled={isSubmitting}
+                                                                />
+                                                                <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => {
+                                                                    const newOptions = field.value.filter((_, i) => i !== optIndex);
+                                                                    field.onChange(newOptions);
+                                                                }} disabled={isSubmitting}>
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                              </div>
+                                                            ))}
+                                                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                                                                field.onChange([...field.value, '']);
+                                                            }} disabled={isSubmitting}>
+                                                              <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
+                                                            </Button>
+                                                          </>
+                                                        )}
+                                                    />
                                                     <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} disabled={isSubmitting}/>
                                                   </div>
                                                 </Card>
@@ -672,40 +683,50 @@ export default function AdminQuizzesPage() {
                                                     <Label className="text-xs text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
                                                     {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
                                                     
-                                                    {(watchQuestions[qIndex]?.options || []).map((opt, optIndex) => (
-                                                      <div key={optIndex} className="flex items-center gap-2">
-                                                        <Controller
-                                                          control={control}
-                                                          name={`questions.${qIndex}.correctAnswers`}
-                                                          render={({ field }) => (
-                                                            <Checkbox
-                                                              checked={field.value?.includes(watchQuestions[qIndex].options[optIndex])}
-                                                              onCheckedChange={(checked) => {
-                                                                const optionText = watchQuestions[qIndex].options[optIndex];
-                                                                if (!optionText) return;
-                                                                return checked
-                                                                  ? field.onChange([...(field.value || []), optionText])
-                                                                  : field.onChange(field.value?.filter((value) => value !== optionText));
-                                                              }}
-                                                            />
-                                                          )}
-                                                        />
-                                                        <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}` as const)}/>
-                                                         <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => {
-                                                            const currentOptions = watch(`questions.${qIndex}.options`);
-                                                            const newOptions = currentOptions.filter((_, i) => i !== optIndex);
-                                                            const fieldArrayName = `questions.${qIndex}.options` as const;
-                                                            reset({ ...watch(), [fieldArrayName]: newOptions });
-                                                        }}><Trash2 className="w-4 h-4" /></Button>
-                                                      </div>
-                                                    ))}
+                                                     <Controller
+                                                        control={control}
+                                                        name={`questions.${qIndex}.options`}
+                                                        render={({ field }) => (
+                                                          <>
+                                                            {(field.value || []).map((opt, optIndex) => (
+                                                              <div key={optIndex} className="flex items-center gap-2">
+                                                                <Controller
+                                                                  control={control}
+                                                                  name={`questions.${qIndex}.correctAnswers`}
+                                                                  render={({ field: correctAnswersField }) => (
+                                                                    <Checkbox
+                                                                      checked={correctAnswersField.value?.includes(opt)}
+                                                                      onCheckedChange={(checked) => {
+                                                                        const newCorrectAnswers = checked
+                                                                          ? [...(correctAnswersField.value || []), opt]
+                                                                          : (correctAnswersField.value || []).filter((value) => value !== opt);
+                                                                        correctAnswersField.onChange(newCorrectAnswers);
+                                                                      }}
+                                                                    />
+                                                                  )}
+                                                                />
+                                                                <Input 
+                                                                  placeholder={`Option ${optIndex + 1}`} 
+                                                                  value={opt}
+                                                                  onChange={(e) => {
+                                                                      const newOptions = [...field.value];
+                                                                      newOptions[optIndex] = e.target.value;
+                                                                      field.onChange(newOptions);
+                                                                  }}
+                                                                />
+                                                                 <Button variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => {
+                                                                    const newOptions = field.value.filter((_, i) => i !== optIndex);
+                                                                    field.onChange(newOptions);
+                                                                }}><Trash2 className="w-4 h-4" /></Button>
+                                                              </div>
+                                                            ))}
 
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                                                        const currentOptions = watch(`questions.${qIndex}.options`);
-                                                        const newOptions = [...currentOptions, ''];
-                                                        const fieldArrayName = `questions.${qIndex}.options` as const;
-                                                        reset({ ...watch(), [fieldArrayName]: newOptions });
-                                                    }}><PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option</Button>
+                                                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                                                                field.onChange([...(field.value || []), '']);
+                                                            }}><PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option</Button>
+                                                          </>
+                                                        )}
+                                                      />
                                                     <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
                                                   </div>
                                                 </Card>

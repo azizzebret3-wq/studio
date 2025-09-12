@@ -357,7 +357,6 @@ export default function QuizAdminPanel() {
       total_questions: questions.length,
     };
     
-    // Remove scheduledFor if it's not a mock exam
     if (!quizDataToSave.isMockExam) {
         delete quizDataToSave.scheduledFor;
     }
@@ -370,8 +369,13 @@ export default function QuizAdminPanel() {
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
-        handleCloseDialog();
-        fetchQuizzes();
+        
+        // Use a timeout to allow state updates to settle before changing the DOM
+        setTimeout(() => {
+            handleCloseDialog();
+            fetchQuizzes();
+        }, 50);
+
     }).catch(error => {
         toast({
             variant: 'destructive',
@@ -407,7 +411,7 @@ export default function QuizAdminPanel() {
         setValue('category', quiz.category);
         setValue('difficulty', quiz.difficulty);
         setValue('duration_minutes', quiz.duration_minutes);
-        setValue('isMockExam', false); // Ensure generated quiz is not a mock exam by default
+        setValue('isMockExam', false); // Generated quiz is not a mock exam
         setValue('scheduledFor', undefined);
         
         setQuestions((quiz.questions || []).map(q => ({

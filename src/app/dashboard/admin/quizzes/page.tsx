@@ -73,7 +73,7 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
       name: `questions.${qIndex}.options`
     });
 
-    const optionsWatch = useWatch({ control, name: `questions.${qIndex}.options` });
+    const optionsWatch = useWatch({ control, name: `questions.${qIndex}.options`, defaultValue: [] });
     
     return (
         <Card className="p-4 bg-background/50 border">
@@ -111,6 +111,7 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
                                           : correctAnswersValue.filter((v: string) => v !== optionValue);
                                       onChange(newValue);
                                   }}
+                                  disabled={!optionValue}
                                 />
                               <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
                               <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
@@ -549,7 +550,7 @@ export default function AdminQuizzesPage() {
                                 </AccordionItem>
                             </Accordion>
                            
-                            <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting || !isValid || watchQuestions.length === 0}>
+                            <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting || !isValid}>
                                 {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Mettre à jour le quiz' : 'Enregistrer le nouveau quiz'}</>)}
                             </Button>
                         </CardContent>

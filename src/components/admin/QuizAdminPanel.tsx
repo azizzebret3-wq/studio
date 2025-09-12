@@ -179,7 +179,7 @@ export default function QuizAdminPanel() {
   };
 
   const onFormSubmit = async (formData: QuizFormData) => {
-    const quizDataToSave: NewQuizData = {
+    const quizData: NewQuizData = {
       title: formData.title,
       description: formData.description,
       category: formData.category,
@@ -194,14 +194,17 @@ export default function QuizAdminPanel() {
         explanation: q.explanation,
       })),
       total_questions: formData.questions.length,
-      scheduledFor: formData.isMockExam ? formData.scheduledFor : undefined,
     };
+
+    if (formData.isMockExam && formData.scheduledFor) {
+      quizData.scheduledFor = formData.scheduledFor;
+    }
 
     try {
       if (editingQuiz) {
-        await updateQuizInFirestore(editingQuiz.id!, quizDataToSave as Partial<Quiz>);
+        await updateQuizInFirestore(editingQuiz.id!, quizData as Partial<Quiz>);
       } else {
-        await saveQuizToFirestore(quizDataToSave);
+        await saveQuizToFirestore(quizData);
       }
       
       toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
@@ -212,6 +215,7 @@ export default function QuizAdminPanel() {
       }, 50);
 
     } catch (error) {
+      console.error("Error saving quiz:", error);
       toast({
         variant: 'destructive',
         title: 'Erreur d\'enregistrement',

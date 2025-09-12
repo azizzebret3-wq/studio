@@ -1,51 +1,51 @@
 // src/app/dashboard/formations/page.tsx
 'use client';
 
-import React from 'react';
-import { Trophy, BookCheck, Zap, ChevronRight, BarChart } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Trophy, BookCheck, Zap, ChevronRight, BarChart, Loader } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { getTrainingPathsFromFirestore, TrainingPath } from '@/lib/firestore.service';
+import * as LucideIcons from "lucide-react";
 
-const trainingPaths = [
-  {
-    title: "Préparation Complète au Concours Direct ENA",
-    description: "Un parcours structuré couvrant toutes les matières, des connaissances générales au droit administratif.",
-    icon: BarChart,
-    color: "from-blue-500 to-cyan-500",
-    progress: 75,
-    status: "En cours",
-  },
-  {
-    title: "Maîtriser les Tests Psychotechniques",
-    description: "Développez votre logique, votre raisonnement et votre rapidité pour exceller dans les tests psychotechniques.",
-    icon: BarChart,
-    color: "from-purple-500 to-pink-500",
-    progress: 30,
-    status: "Non commencé",
-  },
-  {
-    title: "Culture Générale pour les Concours de la Fonction Publique",
-    description: "Approfondissez votre connaissance du monde contemporain, de l'histoire et des institutions.",
-    icon: BookCheck,
-    color: "from-orange-500 to-red-500",
-    progress: 0,
-    status: "Non commencé",
-  },
-   {
-    title: "Devenir un Expert en Note de Synthèse",
-    description: "Apprenez la méthodologie et les techniques pour rédiger des notes de synthèse parfaites.",
-    icon: BarChart,
-    color: "from-green-500 to-emerald-500",
-    progress: 100,
-    status: "Terminé",
-  },
-];
+type IconName = keyof typeof LucideIcons;
 
+const Icon = ({ name, ...props }: { name: IconName } & LucideIcons.LucideProps) => {
+  const LucideIcon = LucideIcons[name] as React.ComponentType<LucideIcons.LucideProps>;
+  if (!LucideIcon) return <BookCheck {...props} />; // Fallback icon
+  return <LucideIcon {...props} />;
+};
 
 export default function FormationsPage() {
+  const [trainingPaths, setTrainingPaths] = useState<TrainingPath[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchPaths = async () => {
+      setIsLoading(true);
+      try {
+        const paths = await getTrainingPathsFromFirestore();
+        setTrainingPaths(paths);
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erreur',
+          description: 'Impossible de charger les parcours de formation.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPaths();
+  }, [toast]);
+
+
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -69,14 +69,27 @@ export default function FormationsPage() {
           Proposer un parcours
         </Button>
       </div>
-
+      
+       {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader className="w-10 h-10 animate-spin text-purple-500" />
+        </div>
+      ) : trainingPaths.length === 0 ? (
+        <div className="text-center py-16">
+           <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-10 h-10 text-gray-400" />
+           </div>
+           <h3 className="text-lg font-semibold text-gray-600 mb-1">Aucun parcours de formation</h3>
+           <p className="text-gray-500 text-sm">De nouveaux parcours seront bientôt disponibles.</p>
+        </div>
+      ) : (
        <div className="space-y-6">
-        {trainingPaths.map((path, index) => (
-           <Card key={index} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0">
+        {trainingPaths.map((path) => (
+           <Card key={path.id} className="card-hover glassmorphism shadow-xl group overflow-hidden border-0">
              <Link href="#" className="block p-6">
               <div className="flex flex-col md:flex-row gap-6 items-center">
                 <div className={`w-16 h-16 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-r ${path.color} flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                  <path.icon className="w-8 h-8 text-white" />
+                  <Icon name={path.icon as IconName} className="w-8 h-8 text-white" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
                   <h2 className="text-lg font-bold text-foreground group-hover:text-purple-600 transition-colors">{path.title}</h2>
@@ -97,7 +110,7 @@ export default function FormationsPage() {
            </Card>
         ))}
        </div>
-
+      )}
     </div>
   );
 }

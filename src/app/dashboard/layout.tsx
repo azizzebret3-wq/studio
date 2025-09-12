@@ -1,7 +1,7 @@
 // src/app/dashboard/layout.tsx
 'use client';
 
-import React,  { useState, useEffect } from 'react';
+import React,  { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { getAuth, signOut } from 'firebase/auth';
@@ -27,6 +27,7 @@ import {
   UserCircle,
   ClipboardList,
   BrainCircuit,
+  CheckCheck,
 } from 'lucide-react';
 import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Logo } from '@/components/logo';
 import WhatsAppFloat from '@/components/whatsapp-float';
 import TiktokFloat from '@/components/tiktok-float';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AppNotification, getUserNotifications, markAllNotificationsAsRead } from '@/lib/firestore.service';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const userNavItems = [
   { title: "Accueil", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
@@ -70,14 +75,27 @@ export default function DashboardLayout({
   const { setTheme, theme } = useTheme();
   const { user, userData, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
+  const fetchNotifications = useCallback(async () => {
+    if (user) {
+      const userNotifications = await getUserNotifications(user.uid);
+      setNotifications(userNotifications);
+      setUnreadCount(userNotifications.filter(n => !n.isRead).length);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+  
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
   
-  // Close mobile menu on route change
   useEffect(() => {
     if (mobileMenuOpen) {
       setMobileMenuOpen(false);
@@ -102,6 +120,12 @@ export default function DashboardLayout({
       });
     }
   };
+
+  const handleMarkAllAsRead = async () => {
+    if (!user || unreadCount === 0) return;
+    await markAllNotificationsAsRead(user.uid);
+    fetchNotifications();
+  }
 
   const isNavItemActive = (itemUrl: string) => {
     if (itemUrl === "/dashboard") {
@@ -247,9 +271,54 @@ export default function DashboardLayout({
                   </Badge>
                 )}
                  
-                 <Button variant="ghost" size="icon" className="rounded-xl w-10 h-10 hover:scale-105 transition-all">
-                    <Bell className="w-5 h-5" />
-                 </Button>
+                 <Popover onOpenChange={(open) => { if(open) fetchNotifications()}}>
+                    <PopoverTrigger asChild>
+                       <Button variant="ghost" size="icon" className="relative rounded-xl w-10 h-10 hover:scale-105 transition-all">
+                          <Bell className="w-5 h-5" />
+                          {unreadCount > 0 && (
+                            <span className="absolute top-1 right-1 flex h-4 w-4">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-4 w-4 bg-accent text-xs items-center justify-center text-white">{unreadCount}</span>
+                            </span>
+                          )}
+                       </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium leading-none">Notifications</h4>
+                             {unreadCount > 0 && (
+                              <Button variant="link" size="sm" className="p-0 h-auto" onClick={handleMarkAllAsRead}>
+                                <CheckCheck className="w-4 h-4 mr-1"/>Marquer comme lu
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Vous avez {unreadCount} notification(s) non lue(s).
+                          </p>
+                        </div>
+                        <div className="grid gap-2 max-h-64 overflow-y-auto">
+                           {notifications.length > 0 ? (
+                            notifications.map(notif => (
+                              <Link key={notif.id} href={notif.href} className={`group block p-2 rounded-md hover:bg-accent/50 ${!notif.isRead && 'bg-primary/5'}`}>
+                                <div className="grid grid-cols-[25px_1fr] items-start gap-3">
+                                  <span className={`mt-1 flex h-2 w-2 translate-y-1 rounded-full ${!notif.isRead ? 'bg-primary' : 'bg-muted'}`} />
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-medium leading-none">{notif.title}</p>
+                                    <p className="text-sm text-muted-foreground">{notif.description}</p>
+                                    <p className="text-xs text-muted-foreground/80">{formatDistanceToNow(notif.createdAt, { addSuffix: true, locale: fr })}</p>
+                                  </div>
+                                </div>
+                              </Link>
+                            ))
+                          ) : (
+                            <p className="text-sm text-center text-muted-foreground py-4">Aucune notification pour le moment.</p>
+                          )}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
                 <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}  className="rounded-xl w-10 h-10 hover:scale-105 transition-all">
                   <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

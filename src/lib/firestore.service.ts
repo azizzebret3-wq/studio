@@ -1,6 +1,6 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
 export interface Quiz {
@@ -64,6 +64,28 @@ export type LibraryDocumentFormData = Omit<LibraryDocument, 'id' | 'createdAt'>;
 
 // Type for creating a new quiz. `id` and `createdAt` are handled by Firestore.
 export type NewQuizData = Omit<Quiz, 'id' | 'createdAt'>;
+
+// Structure for a Training Path
+export interface TrainingPath {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  status: 'En cours' | 'Non commencé' | 'Terminé';
+  progress: number;
+}
+
+// Structure for Notifications
+export interface AppNotification {
+  id: string;
+  userId: string; // The user who receives the notification
+  title: string;
+  description: string;
+  href: string; // Link to navigate to
+  isRead: boolean;
+  createdAt: Date;
+}
 
 
 export const deleteQuizFromFirestore = async (quizId: string) => {
@@ -151,6 +173,15 @@ export const getUsersFromFirestore = async (): Promise<AppUser[]> => {
         throw new Error("Could not fetch users");
     }
 };
+
+export const getAdminUserId = async (): Promise<string | null> => {
+  const q = query(collection(db, 'users'), where('role', '==', 'admin'), orderBy('createdAt'), limit(1));
+  const adminSnapshot = await getDocs(q);
+  if (!adminSnapshot.empty) {
+    return adminSnapshot.docs[0].id;
+  }
+  return null;
+}
 
 export const updateUserRoleInFirestore = async (uid: string, role: 'admin' | 'user') => {
     try {
@@ -250,3 +281,92 @@ export const deleteDocumentFromFirestore = async (id: string) => {
         throw new Error("Could not delete document");
     }
 };
+
+export const getTrainingPathsFromFirestore = async (): Promise<TrainingPath[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, "training_paths"));
+        return querySnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+            } as TrainingPath;
+        });
+    } catch (e) {
+        console.error("Error getting training paths: ", e);
+        return [];
+    }
+}
+
+export const createNotification = async (notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>) => {
+    try {
+        await addDoc(collection(db, "notifications"), {
+            ...notificationData,
+            isRead: false,
+            createdAt: serverTimestamp(),
+        });
+    } catch (e) {
+        console.error("Error creating notification: ", e);
+    }
+};
+
+export const getUserNotifications = async (userId: string): Promise<AppNotification[]> => {
+    try {
+        const q = query(
+            collection(db, "notifications"),
+            where("userId", "==", userId),
+            orderBy("createdAt", "desc"),
+            limit(10)
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: parseFirestoreDate(doc.data().createdAt),
+        } as AppNotification));
+    } catch (e) {
+        console.error("Error getting notifications: ", e);
+        return [];
+    }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+    try {
+        const notifDocRef = doc(db, 'notifications', notificationId);
+        await updateDoc(notifDocRef, { isRead: true });
+    } catch (e) {
+        console.error("Error marking notification as read: ", e);
+    }
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+    try {
+        const q = query(
+            collection(db, "notifications"),
+            where("userId", "==", userId),
+            where("isRead", "==", false)
+        );
+        const querySnapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        querySnapshot.forEach(doc => {
+            batch.update(doc.ref, { isRead: true });
+        });
+        await batch.commit();
+    } catch (e) {
+        console.error("Error marking all notifications as read: ", e);
+    }
+}
+
+// Add a function to get a single user by ID to find who the admin is
+export async function getUser(uid: string): Promise<AppUser | null> {
+  const userDoc = await getDoc(doc(db, `users/${uid}`));
+  if (userDoc.exists()) {
+    const data = userDoc.data();
+    return {
+      uid: userDoc.id,
+      ...data,
+      createdAt: parseFirestoreDate(data.createdAt),
+    } as AppUser;
+  }
+  return null;
+}

@@ -25,8 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Logo } from "@/components/logo"
-import { Eye, EyeOff, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, Loader } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { createNotification, getAdminUserId } from "@/lib/firestore.service"
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -74,12 +75,11 @@ export default function SignupPage() {
 
       // Check if this is the first user
       const usersCollectionRef = collection(db, "users");
-      const q = query(usersCollectionRef, limit(2)); // Check if more than 1 user exists
+      const q = query(usersCollectionRef, limit(2));
       const querySnapshot = await getDocs(q);
       
       let userRole = 'user';
-      // If there's only 1 user doc (the one we are about to create), it's the first.
-      if (querySnapshot.docs.length < 1) {
+      if (querySnapshot.docs.length === 0) { // Check if it's strictly the first one
         userRole = 'admin';
         toast({
             title: "Super-utilisateur activé !",
@@ -98,6 +98,19 @@ export default function SignupPage() {
         role: userRole,
         subscription_type: 'gratuit', // Default subscription
       });
+      
+       // Send notification to admin if it's a new user
+      if (userRole === 'user') {
+          const adminId = await getAdminUserId();
+          if (adminId) {
+              await createNotification({
+                  userId: adminId,
+                  title: "Nouvel utilisateur inscrit",
+                  description: `${fullName} vient de s'inscrire sur la plateforme.`,
+                  href: `/dashboard/admin/users`,
+              });
+          }
+      }
       
       toast({
         title: "Compte créé avec succès",
@@ -222,7 +235,7 @@ export default function SignupPage() {
                 </div>
               </div>
               <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg group md:col-span-2" disabled={loading}>
-                 {loading ? "Création en cours..." : "Créer mon compte"}
+                 {loading ? <><Loader className="w-4 h-4 mr-2 animate-spin"/> Création en cours...</> : "Créer mon compte"}
                  {!loading && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}
               </Button>
             </form>

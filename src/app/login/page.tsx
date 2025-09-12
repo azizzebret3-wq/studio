@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signInWithEmailAndPassword } from "firebase/auth"
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,14 +17,26 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/logo"
-import { Eye, EyeOff, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, Loader } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetPhone, setResetPhone] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -50,6 +62,38 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPhone) {
+        toast({ title: "Numéro de téléphone requis", variant: "destructive" });
+        return;
+    }
+    setIsResetting(true);
+    try {
+        const email = `${resetPhone}@gagnetonconcours.app`;
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: "Email de réinitialisation envoyé",
+            description: "Veuillez consulter l'adresse e-mail associée à votre compte (même si elle est fictive, Firebase enverra un lien si l'utilisateur existe). Pour ce prototype, vérifiez la console Firebase ou contactez un admin si besoin.",
+        });
+        setIsResetDialogOpen(false);
+        setResetPhone("");
+    } catch (error: any) {
+        console.error(error);
+        let description = "Une erreur est survenue."
+        if(error.code === 'auth/user-not-found'){
+            description = "Aucun utilisateur trouvé avec ce numéro de téléphone."
+        }
+        toast({
+            variant: "destructive",
+            title: "Erreur",
+            description: description,
+        });
+    } finally {
+        setIsResetting(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50/50 via-white to-blue-50/50 p-4">
@@ -83,12 +127,42 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password"  className="font-semibold text-gray-700">Mot de passe</Label>
-                  <Link
-                    href="#"
-                    className="ml-auto inline-block text-sm text-purple-600 hover:text-purple-800 hover:underline"
-                  >
-                    Mot de passe oublié?
-                  </Link>
+                   <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                      <DialogTrigger asChild>
+                         <span
+                            className="ml-auto inline-block text-sm text-purple-600 hover:text-purple-800 hover:underline cursor-pointer"
+                          >
+                            Mot de passe oublié?
+                          </span>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <form onSubmit={handlePasswordReset}>
+                            <DialogHeader>
+                              <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+                              <DialogDescription>
+                                Entrez votre numéro de téléphone. Nous enverrons un lien de réinitialisation à l'email associé.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                                <Label htmlFor="reset-phone">Numéro de téléphone</Label>
+                                <Input 
+                                    id="reset-phone" 
+                                    type="tel" 
+                                    placeholder="70112233" 
+                                    value={resetPhone}
+                                    onChange={(e) => setResetPhone(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isResetting}>Annuler</Button>
+                                <Button type="submit" disabled={isResetting}>
+                                    {isResetting ? <><Loader className="w-4 h-4 mr-2 animate-spin" /> Envoi...</> : "Envoyer"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                 </div>
                 <div className="relative">
                   <Input 
@@ -111,7 +185,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg group" disabled={loading}>
-                {loading ? "Connexion..." : "Se connecter"}
+                {loading ? <><Loader className="w-4 h-4 mr-2 animate-spin" /> Connexion...</> : "Se connecter"}
                 {!loading && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}
               </Button>
             </form>

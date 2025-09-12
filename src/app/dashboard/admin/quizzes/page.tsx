@@ -77,6 +77,14 @@ const QuestionEditor = ({ qIndex, control, register, errors, isSubmitting, remov
 
   const questionWatch = watch(`questions.${qIndex}`);
 
+  const handleCorrectAnswerChange = (optionValue: string, isChecked: boolean) => {
+    const currentCorrectAnswers = control.getValues(`questions.${qIndex}.correctAnswers`) || [];
+    const newCorrectAnswers = isChecked
+      ? [...currentCorrectAnswers, optionValue]
+      : currentCorrectAnswers.filter((value: string) => value !== optionValue);
+    control.setValue(`questions.${qIndex}.correctAnswers`, newCorrectAnswers, { shouldValidate: true });
+  };
+
   return (
       <Card className="p-4 bg-background/50">
         <div className="flex justify-between items-start mb-2">
@@ -97,17 +105,11 @@ const QuestionEditor = ({ qIndex, control, register, errors, isSubmitting, remov
               <Controller
                 control={control}
                 name={`questions.${qIndex}.correctAnswers`}
-                defaultValue={questionWatch.correctAnswers || []}
-                render={({ field: correctAnswersField }) => (
+                render={({ field: { value } }) => (
                   <Checkbox
-                    checked={correctAnswersField.value?.includes(questionWatch.options[optIndex])}
+                    checked={value?.includes(questionWatch.options[optIndex])}
                     onCheckedChange={(checked) => {
-                      const optionValue = questionWatch.options[optIndex];
-                      const currentCorrectAnswers = correctAnswersField.value || [];
-                      const newCorrectAnswers = checked
-                        ? [...currentCorrectAnswers, optionValue]
-                        : currentCorrectAnswers.filter((value) => value !== optionValue);
-                      correctAnswersField.onChange(newCorrectAnswers);
+                      handleCorrectAnswerChange(questionWatch.options[optIndex], !!checked);
                     }}
                     disabled={isSubmitting}
                   />
@@ -118,7 +120,7 @@ const QuestionEditor = ({ qIndex, control, register, errors, isSubmitting, remov
                 {...register(`questions.${qIndex}.options.${optIndex}`)}
                 disabled={isSubmitting}
               />
-              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={isSubmitting}>
+              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={isSubmitting || fields.length < 2}>
                   <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -248,7 +250,7 @@ export default function AdminQuizzesPage() {
     reset({
       ...quiz,
       duration_minutes: quiz.duration_minutes,
-      questions: quiz.questions.map(q => ({...q, options: q.options})),
+      questions: quiz.questions.map(q => ({...q, options: q.options, correctAnswers: q.correctAnswers || []})),
       scheduledFor,
     });
     setIsEditDialogOpen(true);
@@ -275,11 +277,10 @@ export default function AdminQuizzesPage() {
     try {
         let scheduledForDate: Date | undefined = undefined;
         if (data.isMockExam && data.scheduledFor) {
-            // Check if it's already a Date object
-            if (data.scheduledFor instanceof Date) {
-                scheduledForDate = data.scheduledFor;
-            } else if (typeof data.scheduledFor === 'string') {
-                scheduledForDate = new Date(data.scheduledFor);
+            scheduledForDate = new Date(data.scheduledFor);
+            if (isNaN(scheduledForDate.getTime())) {
+                toast({ variant: "destructive", title: "Date invalide", description: "Veuillez fournir une date valide pour le concours blanc." });
+                return;
             }
         }
         
@@ -291,8 +292,7 @@ export default function AdminQuizzesPage() {
             scheduledFor: scheduledForDate,
         };
 
-        // Remove the string version if it exists
-        const { scheduledFor: stringDate, ...finalQuizData } = quizDataToSave;
+        const { scheduledFor: _, ...finalQuizData } = quizDataToSave;
 
 
         if (editingQuiz?.id) {

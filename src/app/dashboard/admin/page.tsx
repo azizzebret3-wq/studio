@@ -43,6 +43,13 @@ export default function AdminDashboardPage() {
           icon: FileText,
           color: "from-rose-500 to-pink-500"
       },
+       {
+          title: "Gérer les Quiz",
+          description: "Créer, modifier et générer des quiz.",
+          href: "/dashboard/admin/quizzes",
+          icon: ClipboardList,
+          color: "from-blue-500 to-cyan-500"
+      },
   ]
 
   return (

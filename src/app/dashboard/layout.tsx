@@ -25,6 +25,7 @@ import {
   Sun,
   CalendarClock,
   UserCircle,
+  ClipboardList,
 } from 'lucide-react';
 import { useTheme } from "next-themes"
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ const userNavItems = [
 const adminNavItems = [
   { title: "Gérer Contenu", url: "/dashboard/admin/content", icon: FileText, gradient: "from-rose-500 to-pink-500" },
   { title: "Gérer Users", url: "/dashboard/admin/users", icon: Users, gradient: "from-amber-500 to-orange-500" },
+  { title: "Gérer Quiz", url: "/dashboard/admin/quizzes", icon: ClipboardList, gradient: "from-blue-500 to-cyan-500" },
 ];
 
 const mobileNavItems = [

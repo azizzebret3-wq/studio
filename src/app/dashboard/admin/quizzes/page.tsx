@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -45,7 +45,7 @@ import {
 
 const manualQuestionSchema = z.object({
   question: z.string().min(1, 'La question ne peut pas être vide.'),
-  options: z.array(z.string().min(1, "L'option ne peut pas être vide.")).min(2, 'Au moins deux options sont requises.'),
+  options: z.array(z.object({ value: z.string().min(1, "L'option ne peut pas être vide.") })).min(2, 'Au moins deux options sont requises.'),
   correctAnswers: z.array(z.string()).min(1, 'Au moins une bonne réponse est requise.'),
   explanation: z.string().optional(),
 });
@@ -121,7 +121,7 @@ export default function AdminQuizzesPage() {
     questions: []
   };
 
-  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid }, getValues, setValue } = useForm<QuizFormValues>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid } } = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
       defaultValues: defaultFormValues,
       mode: 'onChange'
@@ -150,7 +150,7 @@ export default function AdminQuizzesPage() {
       duration_minutes: quiz.duration_minutes,
       questions: quiz.questions.map(q => ({
           ...q, 
-          options: q.options || [], 
+          options: (q.options || []).map(opt => ({ value: opt })), 
           correctAnswers: q.correctAnswers || []
       })),
       scheduledFor,
@@ -189,7 +189,7 @@ export default function AdminQuizzesPage() {
         scheduledFor: '',
         questions: result.quiz.questions.map(q => ({
           ...q,
-          options: q.options || [],
+          options: (q.options || []).map(opt => ({ value: opt })),
           correctAnswers: q.correctAnswers || [],
         })),
       });
@@ -227,6 +227,7 @@ export default function AdminQuizzesPage() {
         
         const quizDataToSave = {
             ...data,
+            questions: data.questions.map(q => ({...q, options: q.options.map(opt => opt.value)})),
             total_questions: data.questions.length,
             updatedAt: new Date(),
             scheduledFor: scheduledForDate,
@@ -469,21 +470,68 @@ export default function AdminQuizzesPage() {
                                 <AccordionItem value="item-2" className="border-b-0">
                                      <AccordionTrigger>Questions ({questions.length})</AccordionTrigger>
                                      <AccordionContent>
-                                        {errors.questions && <p className="text-sm text-red-500 pb-2">{errors.questions.message || errors.questions.root?.message}</p>}
+                                        {errors.questions && !errors.questions.root && <p className="text-sm text-red-500 pb-2">{errors.questions.message}</p>}
                                          <div className="space-y-4 p-1">
-                                            {questions.map((question, qIndex) => (
-                                                <QuestionEditor 
-                                                    key={question.id} 
-                                                    qIndex={qIndex} 
-                                                    control={control} 
-                                                    register={register} 
-                                                    errors={errors}
-                                                    removeQuestion={removeQuestion}
-                                                    getValues={getValues}
-                                                    setValue={setValue}
-                                                />
-                                             ))}
-                                            <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: ['', ''], correctAnswers: [], explanation: '' })}>
+                                            {questions.map((question, qIndex) => {
+                                                const { fields: options, append: appendOption, remove: removeOption } = useFieldArray({
+                                                    control,
+                                                    name: `questions.${qIndex}.options`,
+                                                });
+                                                return (
+                                                    <Card key={question.id} className="p-4 bg-background/50 border">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                        <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
+                                                        <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                        </div>
+                                                        <div className="space-y-4">
+                                                        <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
+                                                        {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
+                                                
+                                                        <div className="space-y-2">
+                                                            <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
+                                                            {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions?.[qIndex]?.correctAnswers?.message}</p>}
+                                                
+                                                            <div className="space-y-2">
+                                                            {options.map((option, optIndex) => (
+                                                                <div key={option.id} className="flex items-center gap-2">
+                                                                    <Controller
+                                                                        control={control}
+                                                                        name={`questions.${qIndex}.correctAnswers`}
+                                                                        render={({ field }) => (
+                                                                            <Checkbox
+                                                                                checked={field.value?.includes(watch(`questions.${qIndex}.options.${optIndex}.value`))}
+                                                                                onCheckedChange={(checked) => {
+                                                                                    const optionValue = watch(`questions.${qIndex}.options.${optIndex}.value`);
+                                                                                    if (!optionValue) return;
+                                                                                    const newValue = checked
+                                                                                        ? [...(field.value || []), optionValue]
+                                                                                        : (field.value || []).filter((ans:string) => ans !== optionValue);
+                                                                                    field.onChange(newValue);
+                                                                                }}
+                                                                            />
+                                                                        )}
+                                                                    />
+                                                                    <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}.value`)} />
+                                                                    <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => removeOption(optIndex)} disabled={options.length <= 2}>
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
+                                                            </div>
+                                                        </div>
+                                                
+                                                        <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: "" })}>
+                                                            <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
+                                                        </Button>
+                                                
+                                                        <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
+                                                        </div>
+                                                    </Card>
+                                                );
+                                            })}
+                                            <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: [{value:''}, {value:''}], correctAnswers: [], explanation: '' })}>
                                                 <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
                                             </Button>
                                          </div>
@@ -505,75 +553,3 @@ export default function AdminQuizzesPage() {
     </div>
   );
 }
-
-const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion, setValue, getValues }: any) => {
-    const { fields, append, remove } = useFieldArray({
-      control,
-      name: `questions.${qIndex}.options`,
-    });
-  
-    const currentCorrectAnswers = useWatch({
-        control,
-        name: `questions.${qIndex}.correctAnswers`,
-        defaultValue: getValues(`questions.${qIndex}.correctAnswers`) || []
-    });
-  
-    return (
-      <Card className="p-4 bg-background/50 border">
-        <div className="flex justify-between items-start mb-2">
-          <Label className="font-semibold text-base">Question {qIndex + 1}</Label>
-          <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 w-8 h-8" onClick={() => removeQuestion(qIndex)}>
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="space-y-4">
-          <Textarea placeholder="Texte de la question" {...register(`questions.${qIndex}.question`)} />
-          {errors.questions?.[qIndex]?.question && <p className="text-sm text-red-500">{errors.questions[qIndex].question.message}</p>}
-  
-          <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
-            {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
-  
-            <div className="space-y-2">
-              {fields.map((field, optIndex) => {
-                const optionValue = getValues(`questions.${qIndex}.options.${optIndex}`);
-                return (
-                  <div key={field.id} className="flex items-center gap-2">
-                     <Controller
-                        control={control}
-                        name={`questions.${qIndex}.correctAnswers`}
-                        render={({ field: { onChange, value } }) => (
-                            <Checkbox
-                            checked={value?.includes(optionValue)}
-                            onCheckedChange={(checked) => {
-                                if (!optionValue) return;
-                                const newCorrectAnswers = checked
-                                ? [...(value || []), optionValue]
-                                : (value || []).filter((ans:string) => ans !== optionValue);
-                                onChange(newCorrectAnswers);
-                            }}
-                            disabled={!optionValue}
-                            />
-                        )}
-                    />
-                    <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
-                    <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-  
-          <Button type="button" variant="outline" size="sm" onClick={() => append("")}>
-            <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une option
-          </Button>
-  
-          <Textarea placeholder="Explication (optionnel)" {...register(`questions.${qIndex}.explanation`)} />
-        </div>
-      </Card>
-    );
-  };
-
-    

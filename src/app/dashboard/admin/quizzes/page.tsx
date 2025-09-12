@@ -74,7 +74,7 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
     });
 
     const optionsWatch = useWatch({ control, name: `questions.${qIndex}.options` });
-    const correctAnswersWatch = useWatch({ control, name: `questions.${qIndex}.correctAnswers` });
+    const correctAnswersWatch: string[] = useWatch({ control, name: `questions.${qIndex}.correctAnswers` }) || [];
 
     const handleCorrectAnswerChange = (optionValue: string, isChecked: boolean) => {
         const currentCorrectAnswers: string[] = control.getValues(`questions.${qIndex}.correctAnswers`) || [];
@@ -105,12 +105,23 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
                 
                 {fields.map((field, optIndex) => (
                     <div key={field.id} className="flex items-center gap-2">
-                         <Checkbox
-                            id={`correct-answer-${qIndex}-${optIndex}`}
-                            checked={(correctAnswersWatch || []).includes(optionsWatch?.[optIndex])}
-                            onCheckedChange={(checked) => {
-                                handleCorrectAnswerChange(optionsWatch[optIndex], !!checked);
-                            }}
+                         <Controller
+                            control={control}
+                            name={`questions.${qIndex}.correctAnswers`}
+                            render={({ field: { onChange, value = [] } }) => (
+                                <Checkbox
+                                    id={`correct-answer-${qIndex}-${optIndex}`}
+                                    checked={value.includes(optionsWatch?.[optIndex])}
+                                    onCheckedChange={(checked) => {
+                                        const option = optionsWatch?.[optIndex];
+                                        if (!option) return;
+                                        const newValue = checked
+                                            ? [...value, option]
+                                            : value.filter((v: string) => v !== option);
+                                        onChange(newValue);
+                                    }}
+                                />
+                            )}
                         />
                         <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
                         <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>

@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BrainCircuit, Loader, Wand2, Save, PlusCircle, Trash2, ArrowLeft, Edit, ListManage } from 'lucide-react';
+import { BrainCircuit, Loader, Wand2, Save, PlusCircle, Trash2, ArrowLeft, Edit, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuiz, GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -269,7 +269,7 @@ export default function AdminQuizzesPage() {
       <Tabs defaultValue="creator">
         <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="creator"><Wand2 className="mr-2 h-4 w-4" />Créateur de Quiz</TabsTrigger>
-            <TabsTrigger value="manager"><ListManage className="mr-2 h-4 w-4" />Gérer les Quiz</TabsTrigger>
+            <TabsTrigger value="manager"><List className="mr-2 h-4 w-4" />Gérer les Quiz</TabsTrigger>
         </TabsList>
 
         <TabsContent value="creator">

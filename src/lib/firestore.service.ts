@@ -84,7 +84,7 @@ export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Qu
 }
 
 
-export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id'>) => {
+export const saveQuizToFirestore = async (quizData: Omit<Quiz, 'id' | 'createdAt'>) => {
   try {
     const docRef = await addDoc(collection(db, "quizzes"), {
         ...quizData,
@@ -219,7 +219,7 @@ export const addDocumentToFirestore = async (documentData: LibraryDocumentFormDa
   try {
     await addDoc(collection(db, "documents"), {
       ...documentData,
-      createdAt: new Date(),
+      createdAt: serverTimestamp(),
     });
   } catch (e) {
     console.error("Error adding document: ", e);

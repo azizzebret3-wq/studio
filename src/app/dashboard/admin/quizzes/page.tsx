@@ -191,6 +191,7 @@ export default function AdminQuizzesPage() {
       }
     }
     
+    // Construct the object to save, excluding createdAt for new quizzes.
     const quizDataToSave = {
       ...formData,
       questions: questions.map(q => ({
@@ -200,13 +201,14 @@ export default function AdminQuizzesPage() {
         explanation: q.explanation,
       })),
       total_questions: questions.length,
-      createdAt: editingQuiz ? editingQuiz.createdAt : new Date(),
     };
 
     setIsSaving(true);
+    
     const savePromise = editingQuiz
         ? updateQuizInFirestore(editingQuiz.id!, quizDataToSave)
-        : saveQuizToFirestore(quizDataToSave);
+        // For new quizzes, pass the data without createdAt; the service will add it.
+        : saveQuizToFirestore(quizDataToSave as Omit<Quiz, 'id' | 'createdAt'>);
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });

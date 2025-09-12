@@ -54,22 +54,15 @@ export default function Dashboard() {
       if (!user) return;
       setLoadingData(true);
       try {
-        const [fetchedQuizzes, fetchedDocuments] = await Promise.all([
+        const [fetchedQuizzes, fetchedDocuments, fetchedAttempts] = await Promise.all([
           getQuizzesFromFirestore(),
           getDocumentsFromFirestore(),
+          getAttemptsFromFirestore(user.uid),
         ]);
         
-        setQuizzes(fetchedQuizzes); // All quizzes including mock exams for stats
+        setQuizzes(fetchedQuizzes);
         setLatestContent(fetchedDocuments.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0,3));
-        
-        try {
-          const fetchedAttempts = await getAttemptsFromFirestore(user.uid);
-          setRecentAttempts(fetchedAttempts);
-        } catch (attemptsError) {
-          console.error("Could not fetch attempts, maybe index is building?", attemptsError);
-          setRecentAttempts([]); 
-        }
-
+        setRecentAttempts(fetchedAttempts);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
         toast({
@@ -87,7 +80,7 @@ export default function Dashboard() {
   }, [user, loading, toast]);
 
   useEffect(() => {
-      if (loadingData) return;
+      if (loadingData || !recentAttempts) return;
       const totalQuizzes = quizzes.length;
       const completedQuizzes = recentAttempts.length;
       const averageScore = completedQuizzes > 0 
@@ -408,3 +401,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    

@@ -273,19 +273,33 @@ export default function AdminQuizzesPage() {
   
   const onSubmitQuiz = async (data: QuizFormValues) => {
     try {
+        let scheduledForDate: Date | undefined = undefined;
+        if (data.isMockExam && data.scheduledFor) {
+            // Check if it's already a Date object
+            if (data.scheduledFor instanceof Date) {
+                scheduledForDate = data.scheduledFor;
+            } else if (typeof data.scheduledFor === 'string') {
+                scheduledForDate = new Date(data.scheduledFor);
+            }
+        }
+        
         const quizDataToSave = {
             ...data,
             total_questions: data.questions.length,
-            createdAt: editingQuiz ? editingQuiz.createdAt : new Date(),
+            createdAt: editingQuiz ? (editingQuiz.createdAt instanceof Date ? editingQuiz.createdAt : new Date(editingQuiz.createdAt)) : new Date(),
             updatedAt: new Date(),
-            ...(data.isMockExam && data.scheduledFor ? { scheduledFor: new Date(data.scheduledFor) } : {}),
+            scheduledFor: scheduledForDate,
         };
 
+        // Remove the string version if it exists
+        const { scheduledFor: stringDate, ...finalQuizData } = quizDataToSave;
+
+
         if (editingQuiz?.id) {
-           await updateQuizInFirestore(editingQuiz.id, quizDataToSave);
+           await updateQuizInFirestore(editingQuiz.id, finalQuizData);
            toast({ title: 'Succès', description: 'Le quiz a été mis à jour.' });
         } else {
-           await saveQuizToFirestore(quizDataToSave);
+           await saveQuizToFirestore(finalQuizData);
            toast({ title: 'Succès', description: 'Le quiz a été sauvegardé.' });
         }
         

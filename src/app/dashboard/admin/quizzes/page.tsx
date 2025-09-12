@@ -81,9 +81,8 @@ const formatDateForInput = (date: Date | undefined): string => {
     if (!date) return '';
     try {
         const d = new Date(date);
-        // Pad month, day, hours, and minutes with a leading zero if needed
-        const pad = (num: number) => num.toString().padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 16);
     } catch (e) {
         return '';
     }
@@ -312,15 +311,13 @@ export default function AdminQuizzesPage() {
   };
   
   const handleCloseDialog = useCallback(() => {
-    if (isSaving) return;
     setIsDialogOpen(false);
     resetAll();
-  }, [isSaving, resetAll]);
+  }, [resetAll]);
 
   const onDialogClose = (open: boolean) => {
-    if (!open && !isSaving) {
-      resetAll();
-      setIsDialogOpen(false);
+    if (!open) {
+      handleCloseDialog();
     }
   }
 
@@ -374,7 +371,6 @@ export default function AdminQuizzesPage() {
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
-        setIsSaving(false);
         handleCloseDialog();
         fetchQuizzes();
     }).catch(error => {
@@ -383,6 +379,7 @@ export default function AdminQuizzesPage() {
             title: 'Erreur d\'enregistrement',
             description: 'Une erreur est survenue lors de la sauvegarde du quiz.',
         });
+    }).finally(() => {
         setIsSaving(false);
     });
   }

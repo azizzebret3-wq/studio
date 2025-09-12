@@ -295,7 +295,12 @@ export default function AdminQuizzesPage() {
         
         const quizDataToSave = {
             ...data,
-            questions: data.questions.map(q => ({...q, options: q.options.map(opt => opt.value)})),
+            questions: data.questions.map(q => ({
+                question: q.question,
+                options: q.options.map(opt => opt.value),
+                correctAnswers: q.correctAnswers,
+                explanation: q.explanation
+            })),
             total_questions: data.questions.length,
             updatedAt: new Date(),
             scheduledFor: scheduledForDate,

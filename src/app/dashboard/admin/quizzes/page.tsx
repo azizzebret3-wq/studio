@@ -74,19 +74,7 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
     });
 
     const optionsWatch = useWatch({ control, name: `questions.${qIndex}.options` });
-    const correctAnswersWatch: string[] = useWatch({ control, name: `questions.${qIndex}.correctAnswers` }) || [];
-
-    const handleCorrectAnswerChange = (optionValue: string, isChecked: boolean) => {
-        const currentCorrectAnswers: string[] = control.getValues(`questions.${qIndex}.correctAnswers`) || [];
-        let newCorrectAnswers: string[];
-        if(isChecked) {
-            newCorrectAnswers = [...currentCorrectAnswers, optionValue];
-        } else {
-            newCorrectAnswers = currentCorrectAnswers.filter((val: string) => val !== optionValue);
-        }
-        control.setValue(`questions.${qIndex}.correctAnswers`, newCorrectAnswers, { shouldValidate: true, shouldDirty: true });
-    };
-
+    
     return (
         <Card className="p-4 bg-background/50 border">
           <div className="flex justify-between items-start mb-2">
@@ -103,32 +91,37 @@ const QuestionEditor = ({ qIndex, control, register, errors, removeQuestion }: a
                 <Label className="text-sm text-muted-foreground">Options (cochez la/les bonne(s) réponse(s))</Label>
                 {errors.questions?.[qIndex]?.correctAnswers && <p className="text-sm text-red-500">{errors.questions[qIndex].correctAnswers.message}</p>}
                 
-                {fields.map((field, optIndex) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                         <Controller
-                            control={control}
-                            name={`questions.${qIndex}.correctAnswers`}
-                            render={({ field: { onChange, value = [] } }) => (
-                                <Checkbox
-                                    id={`correct-answer-${qIndex}-${optIndex}`}
-                                    checked={value.includes(optionsWatch?.[optIndex])}
-                                    onCheckedChange={(checked) => {
-                                        const option = optionsWatch?.[optIndex];
-                                        if (!option) return;
-                                        const newValue = checked
-                                            ? [...value, option]
-                                            : value.filter((v: string) => v !== option);
-                                        onChange(newValue);
-                                    }}
+                <Controller
+                    control={control}
+                    name={`questions.${qIndex}.correctAnswers`}
+                    defaultValue={[]}
+                    render={({ field: { onChange, value: correctAnswersValue = [] } }) => (
+                      <div className="space-y-2">
+                        {fields.map((field, optIndex) => {
+                          const optionValue = optionsWatch?.[optIndex] ?? '';
+                          return (
+                            <div key={field.id} className="flex items-center gap-2">
+                              <Checkbox
+                                  id={`correct-answer-${qIndex}-${optIndex}`}
+                                  checked={correctAnswersValue.includes(optionValue)}
+                                  onCheckedChange={(checked) => {
+                                      if (!optionValue) return;
+                                      const newValue = checked
+                                          ? [...correctAnswersValue, optionValue]
+                                          : correctAnswersValue.filter((v: string) => v !== optionValue);
+                                      onChange(newValue);
+                                  }}
                                 />
-                            )}
-                        />
-                        <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
-                        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
-                    </div>
-                ))}
+                              <Input placeholder={`Option ${optIndex + 1}`} {...register(`questions.${qIndex}.options.${optIndex}`)} />
+                              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground w-7 h-7" onClick={() => remove(optIndex)} disabled={fields.length <= 2}>
+                                  <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  />
             </div>
 
             <Button type="button" variant="outline" size="sm" onClick={() => append("")}>
@@ -183,21 +176,22 @@ export default function AdminQuizzesPage() {
     fetchQuizzes();
   }, [fetchQuizzes]);
 
-  const defaultFormValues = {
+  const defaultFormValues: QuizFormValues = {
     title: '', 
     description: '', 
     category: '', 
     duration_minutes: 15, 
-    difficulty: 'moyen' as 'facile' | 'moyen' | 'difficile', 
-    access_type: 'gratuit' as 'gratuit' | 'premium', 
+    difficulty: 'moyen', 
+    access_type: 'gratuit', 
     isMockExam: false, 
     scheduledFor: '',
     questions: []
   };
 
-  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isDirty } } = useForm<QuizFormValues>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting, isValid } } = useForm<QuizFormValues>({
       resolver: zodResolver(quizFormSchema),
-      defaultValues: defaultFormValues
+      defaultValues: defaultFormValues,
+      mode: 'onChange' // Validate on change to update `isValid`
   });
 
   const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
@@ -206,6 +200,7 @@ export default function AdminQuizzesPage() {
   });
     
   const watchIsMockExam = watch('isMockExam');
+  const watchQuestions = watch('questions');
 
   const handleResetForm = () => {
     reset(defaultFormValues);
@@ -554,7 +549,7 @@ export default function AdminQuizzesPage() {
                                 </AccordionItem>
                             </Accordion>
                            
-                            <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting || !isDirty}>
+                            <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting || !isValid || watchQuestions.length === 0}>
                                 {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Mettre à jour le quiz' : 'Enregistrer le nouveau quiz'}</>)}
                             </Button>
                         </CardContent>

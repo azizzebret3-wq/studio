@@ -1,6 +1,6 @@
 // src/lib/firestore.service.ts
 import { db } from './firebase';
-import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, QueryDocumentSnapshot, DocumentData, Timestamp, doc, updateDoc, query, where, orderBy, deleteDoc, serverTimestamp, getDoc, writeBatch, limit } from 'firebase/firestore';
 
 // Define the structure of a Quiz document
 export interface Quiz {
@@ -112,8 +112,13 @@ export const updateQuizInFirestore = async (quizId: string, quizData: Partial<Qu
 
 export const saveQuizToFirestore = async (quizData: NewQuizData) => {
   try {
+    const quizDataToSave = { ...quizData };
+    if (!quizDataToSave.isMockExam) {
+      delete quizDataToSave.scheduledFor;
+    }
+    
     const docRef = await addDoc(collection(db, "quizzes"), {
-        ...quizData,
+        ...quizDataToSave,
         createdAt: serverTimestamp() // Use server-side timestamp for consistency
     });
     console.log("Quiz document written with ID: ", docRef.id);

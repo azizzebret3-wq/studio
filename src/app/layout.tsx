@@ -4,7 +4,6 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
-import type { Viewport } from 'next';
 import React, { useEffect, useState } from 'react';
 
 const APP_NAME = "Gagne ton concours";

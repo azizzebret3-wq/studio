@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller, useFormContext, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -72,7 +72,10 @@ const QuestionCard = ({ qIndex, removeQuestion }: { qIndex: number; removeQuesti
     const { fields: options, append: appendOption, remove: removeOption } = useFieldArray({
         control,
         name: `questions.${qIndex}.options`,
+        keyName: "id",
     });
+
+    const questionOptions = watch(`questions.${qIndex}.options`);
 
     return (
         <Card className="p-4 bg-background/50 border">
@@ -98,10 +101,10 @@ const QuestionCard = ({ qIndex, removeQuestion }: { qIndex: number; removeQuesti
                             name={`questions.${qIndex}.correctAnswers`}
                             render={({ field }) => (
                                 <Checkbox
-                                    checked={field.value?.includes(watch(`questions.${qIndex}.options.${optIndex}.value`))}
+                                    checked={field.value?.includes(questionOptions[optIndex].value)}
                                     onCheckedChange={(checked) => {
-                                        const optionValue = watch(`questions.${qIndex}.options.${optIndex}.value`);
-                                        if (optionValue === undefined || optionValue === null) return;
+                                        const optionValue = questionOptions[optIndex].value;
+                                        if (optionValue === undefined || optionValue.trim() === '') return;
                                         const newValue = checked
                                             ? [...(field.value || []), optionValue]
                                             : (field.value || []).filter((ans:string) => ans !== optionValue);
@@ -194,6 +197,7 @@ export default function AdminQuizzesPage() {
   const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
       control,
       name: "questions",
+      keyName: "id",
   });
     
   const watchIsMockExam = watch('isMockExam');
@@ -464,95 +468,97 @@ export default function AdminQuizzesPage() {
                     </Card>
                 </div>
                 <div className="lg:col-span-2">
-                  <form onSubmit={handleSubmit(onSubmitQuiz)}>
-                     <Card className="glassmorphism shadow-xl">
-                        <CardHeader>
-                            <div className='flex justify-between items-center'>
-                                <div>
-                                    <CardTitle>{isEditing ? 'Modifier le Quiz' : 'Créer un Quiz'}</CardTitle>
-                                    <CardDescription>{isEditing ? `Modification du quiz: ${editingQuizId}` : "Remplissez les détails ou générez avec l'IA."}</CardDescription>
-                                </div>
-                                {isEditing && (
-                                     <Button variant="outline" size="sm" onClick={handleResetForm}>
-                                        <XCircle className='w-4 h-4 mr-2' />
-                                        Annuler la modification
-                                    </Button>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="title">Titre du Quiz</Label>
-                                    <Input id="title" placeholder="Ex: Les capitales du monde" {...formMethods.register("title")} />
-                                    {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="category">Catégorie</Label>
-                                    <Input id="category" placeholder="Ex: Culture générale" {...formMethods.register("category")} />
-                                    {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="description">Description du Quiz</Label>
-                                <Textarea id="description" placeholder="Une brève description du quiz" {...formMethods.register("description")} />
-                                {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
-                            </div>
-                            
-                            <Accordion type="single" collapsible className="w-full" defaultValue='item-1'>
-                                <AccordionItem value="item-1">
-                                    <AccordionTrigger>Options du Quiz</AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className="space-y-4 p-1">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                 <Controller control={control} name="difficulty" render={({ field }) => (
-                                                    <div className="space-y-1.5"><Label>Difficulté</Label><Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent></Select></div>
-                                                 )} />
-                                                 <Controller control={control} name="access_type" render={({ field }) => (
-                                                    <div className="space-y-1.5"><Label>Accès</Label><Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent></Select></div>
-                                                 )} />
-                                                <div className="space-y-1.5">
-                                                    <Label htmlFor="duration_minutes">Durée (minutes)</Label>
-                                                    <Input id="duration_minutes" type="number" {...formMethods.register("duration_minutes")} />
-                                                    {errors.duration_minutes && <p className="text-sm text-red-500">{errors.duration_minutes.message}</p>}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2 pt-4">
-                                                <Controller control={control} name="isMockExam" render={({ field }) => ( <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} /> )}/>
-                                                <Label htmlFor="isMockExam">Définir comme Concours Blanc</Label>
-                                            </div>
-                                            {watchIsMockExam && (
-                                                <div className="space-y-1.5">
-                                                    <Label htmlFor="scheduledFor">Date et heure de début</Label>
-                                                    <Input id="scheduledFor" type="datetime-local" {...formMethods.register("scheduledFor")} />
-                                                    {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                                <AccordionItem value="item-2" className="border-b-0">
-                                     <AccordionTrigger>Questions ({questions.length})</AccordionTrigger>
-                                     <AccordionContent>
-                                        {errors.questions && !errors.questions.root && <p className="text-sm text-red-500 pb-2">{errors.questions.message}</p>}
-                                         <div className="space-y-4 p-1">
-                                            {questions.map((question, qIndex) => (
-                                                <QuestionCard key={question.id} qIndex={qIndex} removeQuestion={removeQuestion} />
-                                            ))}
-                                            <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: [{value:''}, {value:''}], correctAnswers: [], explanation: '' })}>
-                                                <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
-                                            </Button>
-                                         </div>
-                                     </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                           
-                            <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting || !isValid}>
-                                {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Mettre à jour le quiz' : 'Enregistrer le nouveau quiz'}</>)}
-                            </Button>
-                        </CardContent>
-                     </Card>
-                   </form>
+                  <FormProvider {...formMethods}>
+                     <form onSubmit={handleSubmit(onSubmitQuiz)}>
+                        <Card className="glassmorphism shadow-xl">
+                          <CardHeader>
+                              <div className='flex justify-between items-center'>
+                                  <div>
+                                      <CardTitle>{isEditing ? 'Modifier le Quiz' : 'Créer un Quiz'}</CardTitle>
+                                      <CardDescription>{isEditing ? `Modification du quiz: ${editingQuizId}` : "Remplissez les détails ou générez avec l'IA."}</CardDescription>
+                                  </div>
+                                  {isEditing && (
+                                       <Button variant="outline" size="sm" onClick={handleResetForm}>
+                                          <XCircle className='w-4 h-4 mr-2' />
+                                          Annuler la modification
+                                      </Button>
+                                  )}
+                              </div>
+                          </CardHeader>
+                          <CardContent className="space-y-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                      <Label htmlFor="title">Titre du Quiz</Label>
+                                      <Input id="title" placeholder="Ex: Les capitales du monde" {...formMethods.register("title")} />
+                                      {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+                                  </div>
+                                  <div className="space-y-1.5">
+                                      <Label htmlFor="category">Catégorie</Label>
+                                      <Input id="category" placeholder="Ex: Culture générale" {...formMethods.register("category")} />
+                                      {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
+                                  </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                  <Label htmlFor="description">Description du Quiz</Label>
+                                  <Textarea id="description" placeholder="Une brève description du quiz" {...formMethods.register("description")} />
+                                  {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
+                              </div>
+                              
+                              <Accordion type="single" collapsible className="w-full" defaultValue='item-1'>
+                                  <AccordionItem value="item-1">
+                                      <AccordionTrigger>Options du Quiz</AccordionTrigger>
+                                      <AccordionContent>
+                                          <div className="space-y-4 p-1">
+                                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                   <Controller control={control} name="difficulty" render={({ field }) => (
+                                                      <div className="space-y-1.5"><Label>Difficulté</Label><Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent></Select></div>
+                                                   )} />
+                                                   <Controller control={control} name="access_type" render={({ field }) => (
+                                                      <div className="space-y-1.5"><Label>Accès</Label><Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent></Select></div>
+                                                   )} />
+                                                  <div className="space-y-1.5">
+                                                      <Label htmlFor="duration_minutes">Durée (minutes)</Label>
+                                                      <Input id="duration_minutes" type="number" {...formMethods.register("duration_minutes")} />
+                                                      {errors.duration_minutes && <p className="text-sm text-red-500">{errors.duration_minutes.message}</p>}
+                                                  </div>
+                                              </div>
+                                              <div className="flex items-center space-x-2 pt-4">
+                                                  <Controller control={control} name="isMockExam" render={({ field }) => ( <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} /> )}/>
+                                                  <Label htmlFor="isMockExam">Définir comme Concours Blanc</Label>
+                                              </div>
+                                              {watchIsMockExam && (
+                                                  <div className="space-y-1.5">
+                                                      <Label htmlFor="scheduledFor">Date et heure de début</Label>
+                                                      <Input id="scheduledFor" type="datetime-local" {...formMethods.register("scheduledFor")} />
+                                                      {errors.scheduledFor && <p className="text-sm text-red-500">{errors.scheduledFor.message}</p>}
+                                                  </div>
+                                              )}
+                                          </div>
+                                      </AccordionContent>
+                                  </AccordionItem>
+                                  <AccordionItem value="item-2" className="border-b-0">
+                                       <AccordionTrigger>Questions ({questions.length})</AccordionTrigger>
+                                       <AccordionContent>
+                                          {errors.questions && !errors.questions.root && <p className="text-sm text-red-500 pb-2">{errors.questions.message}</p>}
+                                           <div className="space-y-4 p-1">
+                                              {questions.map((question, qIndex) => (
+                                                  <QuestionCard key={question.id} qIndex={qIndex} removeQuestion={removeQuestion} />
+                                              ))}
+                                              <Button type="button" variant="outline" onClick={() => appendQuestion({ question: '', options: [{value:''}, {value:''}], correctAnswers: [], explanation: '' })}>
+                                                  <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une question
+                                              </Button>
+                                           </div>
+                                       </AccordionContent>
+                                  </AccordionItem>
+                              </Accordion>
+                             
+                              <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold" disabled={isSubmitting || !isValid}>
+                                  {isSubmitting ? (<><Loader className="mr-2 h-4 w-4 animate-spin" /> Sauvegarde...</>) : (<><Save className="mr-2 h-4 w-4" /> {isEditing ? 'Mettre à jour le quiz' : 'Enregistrer le nouveau quiz'}</>)}
+                              </Button>
+                          </CardContent>
+                        </Card>
+                     </form>
+                   </FormProvider>
                 </div>
             </div>
         </TabsContent>

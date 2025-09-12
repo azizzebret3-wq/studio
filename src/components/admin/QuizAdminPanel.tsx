@@ -1,9 +1,9 @@
 // src/components/admin/QuizAdminPanel.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, Controller, UseFormReturn } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -89,234 +89,6 @@ const formatDateForInput = (date: Date | undefined): string => {
 };
 
 // =================================================================
-// Quiz Details Form Component
-// =================================================================
-interface QuizDetailsFormProps {
-  form: UseFormReturn<QuizDetailsFormData>;
-}
-
-const QuizDetailsForm = memo(function QuizDetailsForm({ form }: QuizDetailsFormProps) {
-  const { register, control, watch, formState: { errors } } = form;
-  const isMockExam = watch("isMockExam");
-
-  return (
-    <Card className="p-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="title">Titre *</Label>
-          <Input {...register("title")} id="title" />
-          {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="description">Description *</Label>
-          <Input {...register("description")} id="description" />
-          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="category">Catégorie *</Label>
-          <Input {...register("category")} id="category"/>
-          {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-        </div>
-        <div className="space-y-1.5">
-          <Label>Difficulté *</Label>
-          <Controller
-            name="difficulty"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Accès *</Label>
-          <Controller
-            name="access_type"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
-          <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
-          {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
-        </div>
-      </div>
-      <div className="flex items-center space-x-2 mt-4">
-        <Controller
-          name="isMockExam"
-          control={control}
-          render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}
-        />
-        <Label htmlFor="isMockExam">Concours Blanc</Label>
-      </div>
-      {isMockExam && (
-        <div className="mt-4 space-y-1.5">
-          <Label>Date de programmation</Label>
-          <Controller
-            name="scheduledFor"
-            control={control}
-            render={({ field }) => (
-              <Input 
-                type="datetime-local" 
-                value={formatDateForInput(field.value)}
-                onChange={(e) => field.onChange(new Date(e.target.value))}
-              />
-            )}
-          />
-          {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
-        </div>
-      )}
-    </Card>
-  );
-});
-
-// =================================================================
-// Questions Form Component
-// =================================================================
-interface QuestionsFormProps {
-  questions: Question[];
-  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
-  isGenerating: boolean;
-  handleGenerateQuiz: () => Promise<void>;
-}
-
-const QuestionsForm = memo(function QuestionsForm({ questions, setQuestions, isGenerating, handleGenerateQuiz }: QuestionsFormProps) {
-  
-  const handleAddQuestion = () => {
-    setQuestions(prev => [...prev, { 
-        id: crypto.randomUUID(), 
-        question: '', 
-        options: [{id: crypto.randomUUID(), value: ''}, {id: crypto.randomUUID(), value: ''}], 
-        correctAnswers: [], 
-        explanation: '' 
-    }]);
-  };
-
-  const handleRemoveQuestion = (questionId: string) => {
-    setQuestions(prev => prev.filter(q => q.id !== questionId));
-  };
-  
-  const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
-    setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, [field]: value } : q));
-  }
-
-  const handleAddOption = (questionId: string) => {
-    setQuestions(prev => prev.map(q => 
-        q.id === questionId 
-            ? { ...q, options: [...q.options, {id: crypto.randomUUID(), value: ''}] } 
-            : q
-    ));
-  };
-  
-  const handleRemoveOption = (questionId: string, optionId: string) => {
-     setQuestions(prev => prev.map(q => {
-        if (q.id === questionId) {
-            const removedOption = q.options.find(opt => opt.id === optionId);
-            const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== removedOption?.value);
-            return {
-                ...q,
-                options: q.options.filter(opt => opt.id !== optionId),
-                correctAnswers: newCorrectAnswers,
-            }
-        }
-        return q;
-    }));
-  };
-
-  const handleOptionChange = (questionId: string, optionId: string, value: string) => {
-    setQuestions(prev => prev.map(q => {
-        if (q.id === questionId) {
-            const oldOptionValue = q.options.find(opt => opt.id === optionId)?.value;
-            const newOptions = q.options.map(opt => opt.id === optionId ? {...opt, value} : opt);
-            const newCorrectAnswers = q.correctAnswers.map(ans => ans === oldOptionValue ? value : ans);
-            return { ...q, options: newOptions, correctAnswers: newCorrectAnswers };
-        }
-        return q;
-    }));
-  };
-
-  const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {
-    setQuestions(prev => prev.map(q => {
-        if (q.id === questionId) {
-            const newCorrectAnswers = q.correctAnswers.includes(optionValue)
-                ? q.correctAnswers.filter(a => a !== optionValue)
-                : [...q.correctAnswers, optionValue];
-            return { ...q, correctAnswers: newCorrectAnswers };
-        }
-        return q;
-    }));
-  };
-
-  return (
-    <div className="space-y-4">
-        <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Questions</h3>
-            <div>
-                 <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
-                    {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
-                </Button>
-                <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
-                    <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
-                </Button>
-            </div>
-        </div>
-        
-        <div className="space-y-6">
-            {questions.map((q, qIndex) => (
-               <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold">Question {qIndex + 1}</h4>
-                    <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
-                        <Trash2 className="w-4 h-4"/>
-                    </Button>
-                  </div>
-                  <div>
-                    <Label>Texte de la question *</Label>
-                    <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Explication (optionnel)</Label>
-                    <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Options et Bonnes réponses *</Label>
-                    <div className="space-y-2 mt-1">
-                        {q.options.map((option) => (
-                            <div key={option.id} className="flex items-center gap-2">
-                                <Checkbox
-                                  id={`correct-${option.id}`}
-                                  checked={q.correctAnswers.includes(option.value)}
-                                  onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
-                                  disabled={!option.value}
-                                />
-                                <Input 
-                                  value={option.value} 
-                                  onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
-                                  placeholder={`Option`} 
-                                />
-                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
-                            </div>
-                        ))}
-                    </div>
-                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
-                  </div>
-               </Card>
-            ))}
-        </div>
-    </div>
-  );
-});
-
-
-// =================================================================
 // Main Admin Panel Component
 // =================================================================
 export default function QuizAdminPanel() {
@@ -345,7 +117,8 @@ export default function QuizAdminPanel() {
     },
   });
 
-  const { reset, setValue } = form;
+  const { reset, setValue, register, control, watch, formState: { errors } } = form;
+  const isMockExam = watch("isMockExam");
 
   const fetchQuizzes = useCallback(async () => {
     setIsLoading(true);
@@ -462,6 +235,7 @@ export default function QuizAdminPanel() {
 
     savePromise.then(() => {
         toast({ title: 'Succès', description: `Le quiz a été ${editingQuiz ? 'mis à jour' : 'enregistré'}.` });
+        // Use timeout to prevent race condition on closing dialog
         setTimeout(() => {
             handleCloseDialog();
             fetchQuizzes();
@@ -501,7 +275,7 @@ export default function QuizAdminPanel() {
         setValue('category', quiz.category);
         setValue('difficulty', quiz.difficulty);
         setValue('duration_minutes', quiz.duration_minutes);
-        setValue('isMockExam', false);
+        setValue('isMockExam', false); // Always reset this
         setValue('scheduledFor', undefined);
         
         setQuestions((quiz.questions || []).map(q => ({
@@ -519,6 +293,73 @@ export default function QuizAdminPanel() {
         setIsGenerating(false);
     }
   };
+
+  // Question handlers
+  const handleAddQuestion = () => {
+    setQuestions(prev => [...prev, { 
+        id: crypto.randomUUID(), 
+        question: '', 
+        options: [{id: crypto.randomUUID(), value: ''}, {id: crypto.randomUUID(), value: ''}], 
+        correctAnswers: [], 
+        explanation: '' 
+    }]);
+  };
+
+  const handleRemoveQuestion = (questionId: string) => {
+    setQuestions(prev => prev.filter(q => q.id !== questionId));
+  };
+  
+  const handleQuestionChange = (questionId: string, field: 'question' | 'explanation', value: string) => {
+    setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, [field]: value } : q));
+  }
+
+  const handleAddOption = (questionId: string) => {
+    setQuestions(prev => prev.map(q => 
+        q.id === questionId 
+            ? { ...q, options: [...q.options, {id: crypto.randomUUID(), value: ''}] } 
+            : q
+    ));
+  };
+  
+  const handleRemoveOption = (questionId: string, optionId: string) => {
+     setQuestions(prev => prev.map(q => {
+        if (q.id === questionId) {
+            const removedOption = q.options.find(opt => opt.id === optionId);
+            const newCorrectAnswers = q.correctAnswers.filter(ans => ans !== removedOption?.value);
+            return {
+                ...q,
+                options: q.options.filter(opt => opt.id !== optionId),
+                correctAnswers: newCorrectAnswers,
+            }
+        }
+        return q;
+    }));
+  };
+
+  const handleOptionChange = (questionId: string, optionId: string, value: string) => {
+    setQuestions(prev => prev.map(q => {
+        if (q.id === questionId) {
+            const oldOptionValue = q.options.find(opt => opt.id === optionId)?.value;
+            const newOptions = q.options.map(opt => opt.id === optionId ? {...opt, value} : opt);
+            const newCorrectAnswers = q.correctAnswers.map(ans => ans === oldOptionValue ? value : ans);
+            return { ...q, options: newOptions, correctAnswers: newCorrectAnswers };
+        }
+        return q;
+    }));
+  };
+
+  const handleCorrectAnswerChange = (questionId: string, optionValue: string) => {
+    setQuestions(prev => prev.map(q => {
+        if (q.id === questionId) {
+            const newCorrectAnswers = q.correctAnswers.includes(optionValue)
+                ? q.correctAnswers.filter(a => a !== optionValue)
+                : [...q.correctAnswers, optionValue];
+            return { ...q, correctAnswers: newCorrectAnswers };
+        }
+        return q;
+    }));
+  };
+
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -602,16 +443,142 @@ export default function QuizAdminPanel() {
            <form onSubmit={form.handleSubmit(validateAndSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
             <div className="flex-1 overflow-y-auto pr-4 space-y-6">
                 
-                <QuizDetailsForm form={form} />
+                {/* Quiz Details Form */}
+                <Card className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="title">Titre *</Label>
+                      <Input {...register("title")} id="title" />
+                      {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="description">Description *</Label>
+                      <Input {...register("description")} id="description" />
+                      {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="category">Catégorie *</Label>
+                      <Input {...register("category")} id="category"/>
+                      {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Difficulté *</Label>
+                      <Controller
+                        name="difficulty"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Accès *</Label>
+                      <Controller
+                        name="access_type"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
+                      <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
+                      {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-4">
+                    <Controller
+                      name="isMockExam"
+                      control={control}
+                      render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}
+                    />
+                    <Label htmlFor="isMockExam">Concours Blanc</Label>
+                  </div>
+                  {isMockExam && (
+                    <div className="mt-4 space-y-1.5">
+                      <Label>Date de programmation</Label>
+                      <Controller
+                        name="scheduledFor"
+                        control={control}
+                        render={({ field }) => (
+                          <Input 
+                            type="datetime-local" 
+                            value={formatDateForInput(field.value)}
+                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                          />
+                        )}
+                      />
+                      {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
+                    </div>
+                  )}
+                </Card>
                 
                 <hr/>
                 
-                <QuestionsForm
-                  questions={questions}
-                  setQuestions={setQuestions}
-                  isGenerating={isGenerating}
-                  handleGenerateQuiz={handleGenerateQuiz}
-                />
+                {/* Questions Form */}
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">Questions</h3>
+                        <div>
+                             <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
+                                {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
+                            </Button>
+                            <Button type="button" size="sm" className="ml-2" onClick={handleAddQuestion}>
+                                <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
+                            </Button>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                        {questions.map((q, qIndex) => (
+                           <Card key={q.id} className="bg-muted/50 p-4 space-y-3">
+                              <div className="flex justify-between items-center">
+                                <h4 className="font-bold">Question {qIndex + 1}</h4>
+                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveQuestion(q.id)}>
+                                    <Trash2 className="w-4 h-4"/>
+                                </Button>
+                              </div>
+                              <div>
+                                <Label>Texte de la question *</Label>
+                                <Textarea value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
+                              </div>
+                              <div>
+                                <Label>Explication (optionnel)</Label>
+                                <Textarea value={q.explanation} onChange={(e) => handleQuestionChange(q.id, 'explanation', e.target.value)} />
+                              </div>
+                              <div>
+                                <Label>Options et Bonnes réponses *</Label>
+                                <div className="space-y-2 mt-1">
+                                    {q.options.map((option) => (
+                                        <div key={option.id} className="flex items-center gap-2">
+                                            <Checkbox
+                                              id={`correct-${option.id}`}
+                                              checked={q.correctAnswers.includes(option.value)}
+                                              onCheckedChange={() => handleCorrectAnswerChange(q.id, option.value)}
+                                              disabled={!option.value}
+                                            />
+                                            <Input 
+                                              value={option.value} 
+                                              onChange={(e) => handleOptionChange(q.id, option.id, e.target.value)}
+                                              placeholder={`Option`} 
+                                            />
+                                            <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => handleRemoveOption(q.id, option.id)}><X className="w-4 h-4"/></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => handleAddOption(q.id)}>Ajouter Option</Button>
+                              </div>
+                           </Card>
+                        ))}
+                    </div>
+                </div>
             </div>
             
             <DialogFooter>

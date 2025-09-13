@@ -31,6 +31,10 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  env: {
+    NEXT_PUBLIC_CINETPAY_API_KEY: process.env.CINETPAY_API_KEY,
+    NEXT_PUBLIC_CINETPAY_SITE_ID: process.env.CINETPAY_SITE_ID,
+  }
 };
 
 export default nextConfig;

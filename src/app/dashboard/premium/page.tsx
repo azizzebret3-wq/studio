@@ -36,45 +36,51 @@ const MoovMoneyLogo = () => (
   </svg>
 )
 
-const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSuccess, user }) => {
+const CinetPayButton: React.FC<{ onSuccess: (transactionId: string) => void; user: any; userData: any }> = ({ onSuccess, user, userData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const {toast} = useToast();
 
   const handlePayment = () => {
-    if (!user) {
+    if (!user || !userData) {
         toast({ title: 'Erreur', description: 'Vous devez être connecté pour payer.', variant: 'destructive'});
         return;
     }
     if ((window as any).CinetPay) {
       setIsLoading(true);
+      const transaction_id = Math.floor(Math.random() * 100000000).toString();
+
       (window as any).CinetPay.setConfig({
         apikey: process.env.NEXT_PUBLIC_CINETPAY_API_KEY,
         site_id: process.env.NEXT_PUBLIC_CINETPAY_SITE_ID,
         notify_url: `${window.location.origin}/api/cinetpay-notify`,
-        mode: 'PRODUCTION',
+        mode: 'PRODUCTION', // Use 'PRODUCTION' for real payments
       });
+
       (window as any).CinetPay.getCheckout({
-        transaction_id: Math.floor(Math.random() * 100000000).toString(),
+        transaction_id: transaction_id,
         amount: 5000,
         currency: 'XOF',
         channels: 'ALL',
         description: 'Abonnement Premium - Gagne Ton Concours',
-         metadata: user.uid, // Pass Firebase User ID in metadata
-        customer_name: user?.fullName || 'Utilisateur',
+        metadata: user.uid, // CRITICAL: Pass Firebase User ID in metadata
+        customer_name: userData?.fullName || 'Utilisateur',
         customer_surname: '',
-        customer_email: user?.email || '',
-        customer_phone_number: user?.phone || '',
+        customer_email: userData?.email || '',
+        customer_phone_number: userData?.phone || '',
         customer_address: 'N/A',
         customer_city: 'N/A',
         customer_country: 'BF',
         customer_state: 'N/A',
         customer_zip_code: '00226'
       });
+
       (window as any).CinetPay.on('payment', (e: any) => {
+        // This callback is for the client-side result.
+        // The definitive "success" is handled by the webhook.
         if (e.status === 'ACCEPTED') {
-          onSuccess();
+          onSuccess(transaction_id);
         } else {
-          toast({ title: 'Paiement échoué', description: 'Votre paiement n\'a pas pu être traité.', variant: 'destructive'});
+          toast({ title: 'Paiement Annulé ou Échoué', description: 'Votre paiement n\'a pas été complété.', variant: 'destructive'});
           setIsLoading(false);
         }
       });
@@ -84,6 +90,9 @@ const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSucc
             setIsLoading(false);
       });
       (window as any).CinetPay.on('close', () => {
+        // This is called when the user closes the payment window without paying.
+        if (!isLoading) return; // Avoid setting loading to false if payment is already processing
+        console.log('CinetPay window closed by user.');
         setIsLoading(false);
       });
     } else {
@@ -105,29 +114,32 @@ const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSucc
 
 export default function PremiumPage() {
   const { user, userData, reloadUserData } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
-  const [isUpgrading, setIsUpgrading] = useState(false);
-
-  const handleUpgradeSuccess = useCallback(async () => {
+  const { toast } = useToast();
+  
+  const handleUpgradeSuccess = useCallback(async (transactionId: string) => {
     if (!user) return;
-    setIsUpgrading(true);
-    try {
-        // We will now rely on the webhook to update the subscription.
-        // We can show a pending state to the user.
-        toast({
-            title: "Paiement reçu ! 🎉",
-            description: "Votre compte sera mis à niveau dans quelques instants.",
-        });
-        // We optimistically reload data, but the webhook is the source of truth.
-        setTimeout(() => {
-            reloadUserData();
-            router.push('/dashboard');
-        }, 3000); 
+    
+    // Don't set loading state here, as the webhook will handle the update.
+    // Just give feedback to the user.
+    toast({
+        title: "Paiement en cours de validation... ⏳",
+        description: "Votre paiement a été reçu. Votre compte sera mis à niveau dans quelques instants.",
+        duration: 10000, // Keep the toast longer
+    });
 
-    } catch (error) {
-        console.error("Error during UI update post-payment:", error);
-    }
+    // Optionally, you can redirect the user or show a pending state on the UI.
+    // The webhook is the source of truth, so we don't grant premium access here.
+    // A good UX is to poll for the user's new status or redirect them after a delay.
+    setTimeout(() => {
+        reloadUserData(); // Check for the updated status
+        router.push('/dashboard');
+        toast({
+            title: "Vérification terminée",
+            description: "Votre statut a été mis à jour. Bienvenue parmi les membres Premium ! 🎉",
+        });
+    }, 8000); // 8 seconds delay to allow webhook to process
+
   }, [user, reloadUserData, router, toast]);
 
 
@@ -181,7 +193,7 @@ export default function PremiumPage() {
                       Vous êtes déjà Premium
                    </Button>
                 ) : (
-                  <CinetPayButton onSuccess={handleUpgradeSuccess} user={user} />
+                  <CinetPayButton onSuccess={handleUpgradeSuccess} user={user} userData={userData} />
                 )}
                  
                  <div className="text-center mt-6">

@@ -20,83 +20,54 @@ async function getTransactionStatus(transactionId: string) {
     return response.json();
 }
 
-async function getUserIdFromPhone(phoneNumber: string): Promise<string | null> {
-    if (!phoneNumber) return null;
-    const usersRef = collection(db, "users");
-    // CinetPay may add country code, so we check for both formats
-    const phoneWithPlus = `+${phoneNumber}`;
-    
-    // We will query for the phone number ending with the provided number
-    // This is a workaround since Firestore doesn't support "endsWith" queries directly
-    // A more robust solution might involve normalizing phone numbers on signup.
-    const q = query(usersRef, where("phone", "==", phoneNumber));
-    const qWithPlus = query(usersRef, where("phone", "==", phoneWithPlus));
-
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        return querySnapshot.docs[0].id;
-    }
-
-    const querySnapshotWithPlus = await getDocs(qWithPlus);
-    if (!querySnapshotWithPlus.empty) {
-        return querySnapshotWithPlus.docs[0].id;
-    }
-    
-    // As a last resort, try to find user by the metadata stored in Cinetpay transaction
-    const qByMeta = query(usersRef, where("uid", "==", phoneNumber));
-    const querySnapshotByMeta = await getDocs(qByMeta);
-    if (!querySnapshotByMeta.empty) {
-        return querySnapshotByMeta.docs[0].id;
-    }
-
-
-    return null;
-}
-
 export async function POST(request: Request) {
     try {
         const data = await request.json();
         const { transaction_id } = data;
 
         if (!transaction_id) {
+            console.error('CinetPay Notify: Transaction ID is missing from the request body.', data);
             return NextResponse.json({ error: 'Transaction ID is missing' }, { status: 400 });
         }
+
+        console.log(`CinetPay Notify: Received notification for transaction_id: ${transaction_id}`);
 
         const transactionDetails = await getTransactionStatus(transaction_id);
         const { code, message, data: transactionData } = transactionDetails;
 
         if (code !== '00') {
-             console.error('CinetPay check error:', message);
-            // Even if we can't check, CinetPay might have sent valid data. We log and proceed.
-            // In production, you might want to handle this differently.
+             console.error(`CinetPay check error for transaction ${transaction_id}:`, message);
+             // In a real production environment, you might want to retry or flag this for manual review.
+             // We'll return an error to CinetPay so they might retry the notification.
+             return NextResponse.json({ error: 'Failed to verify transaction with CinetPay', details: message }, { status: 500 });
         }
 
         if (transactionData && transactionData.status === 'ACCEPTED') {
-            const customerPhoneNumber = transactionData.customer_phone_number || transactionData.metadata;
+            // The Firebase user UID should be in the 'metadata' field.
+            const userId = transactionData.metadata;
             
-            if (!customerPhoneNumber) {
-                 console.error("No UID or phone number found in transaction metadata or customer details");
-                 return NextResponse.json({ error: 'No user identifier found' }, { status: 400 });
+            if (!userId) {
+                 console.error(`CinetPay Notify: No Firebase UID found in metadata for transaction ${transaction_id}.`, transactionData);
+                 return NextResponse.json({ error: 'User identifier (UID) not found in transaction metadata' }, { status: 400 });
             }
 
-            // The metadata field now contains the Firebase UID
-            const userId = customerPhoneNumber;
-            
+            // Update user subscription to 'premium' in Firestore
             await updateUserSubscriptionInFirestore(userId, 'premium');
-            console.log(`Successfully upgraded user ${userId} to premium.`);
+            console.log(`CinetPay Notify: Successfully upgraded user ${userId} to premium for transaction ${transaction_id}.`);
             
+            // Respond to CinetPay that we have successfully processed the notification
             return NextResponse.json({ message: 'User upgraded to premium' });
 
         } else if (transactionData) {
-            console.log(`Transaction ${transaction_id} not accepted. Status: ${transactionData.status}`);
+            console.log(`CinetPay Notify: Transaction ${transaction_id} not successful. Status: ${transactionData.status}`);
             return NextResponse.json({ message: 'Payment not successful' }, { status: 200 });
         } else {
-             console.error('CinetPay check response was invalid:', transactionDetails);
+             console.error(`CinetPay Notify: Invalid response from CinetPay check for transaction ${transaction_id}:`, transactionDetails);
              return NextResponse.json({ error: 'Invalid CinetPay response' }, { status: 500 });
         }
 
     } catch (error) {
-        console.error('Webhook processing error:', error);
+        console.error('CinetPay webhook processing error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

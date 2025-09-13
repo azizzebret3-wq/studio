@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Crown, Sparkles, CheckCircle, Rocket, BrainCircuit, BookOpen, Video, Loader } from 'lucide-react';
@@ -35,6 +36,62 @@ const MoovMoneyLogo = () => (
   </svg>
 )
 
+const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSuccess, user }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handlePayment = () => {
+    if ((window as any).CinetPay) {
+      setIsLoading(true);
+      (window as any).CinetPay.setConfig({
+        apikey: process.env.NEXT_PUBLIC_CINETPAY_API_KEY,
+        site_id: process.env.NEXT_PUBLIC_CINETPAY_SITE_ID,
+        notify_url: 'http://localhost:3000/api/cinetpay-notify',
+        mode: 'PRODUCTION', // or 'SANDBOX'
+      });
+      (window as any).CinetPay.getCheckout({
+        transaction_id: Math.floor(Math.random() * 100000000).toString(),
+        amount: 5000,
+        currency: 'XOF',
+        channels: 'ALL',
+        description: 'Abonnement Premium - Gagne Ton Concours',
+        customer_name: user?.fullName || 'Utilisateur',
+        customer_surname: '',
+        customer_email: user?.email || '',
+        customer_phone_number: user?.phone || '',
+        customer_address: 'N/A',
+        customer_city: 'N/A',
+        customer_country: 'BF',
+        customer_state: 'N/A',
+        customer_zip_code: '00226'
+      });
+      (window as any).CinetPay.on('payment', (e: any) => {
+        if (e.status === 'ACCEPTED') {
+          onSuccess();
+        } else {
+          setIsLoading(false);
+        }
+      });
+       (window as any).CinetPay.on('error', (e:any) => {
+            console.error('CinetPay Error:', e);
+            setIsLoading(false);
+      });
+      (window as any).CinetPay.on('close', () => {
+        setIsLoading(false);
+      });
+    }
+  };
+
+  return (
+    <Button 
+      onClick={handlePayment}
+      disabled={isLoading}
+      className="w-full h-12 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white shadow-lg"
+    >
+        {isLoading ? <><Loader className="w-5 h-5 mr-3 animate-spin"/> Traitement...</> : <><Rocket className="w-5 h-5 mr-3" />Je deviens Premium</>}
+    </Button>
+  );
+};
+
 
 export default function PremiumPage() {
   const { user, userData, reloadUserData } = useAuth();
@@ -42,12 +99,12 @@ export default function PremiumPage() {
   const router = useRouter();
   const [isUpgrading, setIsUpgrading] = useState(false);
 
-  const handleSimulateUpgrade = async () => {
+  const handleUpgradeSuccess = useCallback(async () => {
     if (!user) return;
     setIsUpgrading(true);
     try {
         await updateUserSubscriptionInFirestore(user.uid, 'premium');
-        await reloadUserData(); // Reload user data to reflect new status
+        await reloadUserData();
         toast({
             title: "Félicitations ! 🎉",
             description: "Vous êtes maintenant un membre Premium.",
@@ -59,10 +116,12 @@ export default function PremiumPage() {
     } finally {
         setIsUpgrading(false);
     }
-  };
+  }, [user, reloadUserData, router, toast]);
 
 
   return (
+    <>
+    <Script src="https://cdn.cinetpay.com/seamless/main.js" strategy="afterInteractive" />
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
@@ -110,13 +169,7 @@ export default function PremiumPage() {
                       Vous êtes déjà Premium
                    </Button>
                 ) : (
-                  <Button 
-                    onClick={handleSimulateUpgrade}
-                    disabled={isUpgrading}
-                    className="w-full h-12 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white shadow-lg"
-                  >
-                      {isUpgrading ? <><Loader className="w-5 h-5 mr-3 animate-spin"/> Mise à niveau...</> : <><Rocket className="w-5 h-5 mr-3" />Je deviens Premium</>}
-                  </Button>
+                  <CinetPayButton onSuccess={handleUpgradeSuccess} user={userData} />
                 )}
                  
                  <div className="text-center mt-6">
@@ -135,5 +188,6 @@ export default function PremiumPage() {
       </div>
 
     </div>
+    </>
   );
 }

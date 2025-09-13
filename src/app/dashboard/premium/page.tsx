@@ -38,15 +38,20 @@ const MoovMoneyLogo = () => (
 
 const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSuccess, user }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const {toast} = useToast();
 
   const handlePayment = () => {
+    if (!user) {
+        toast({ title: 'Erreur', description: 'Vous devez être connecté pour payer.', variant: 'destructive'});
+        return;
+    }
     if ((window as any).CinetPay) {
       setIsLoading(true);
       (window as any).CinetPay.setConfig({
         apikey: process.env.NEXT_PUBLIC_CINETPAY_API_KEY,
         site_id: process.env.NEXT_PUBLIC_CINETPAY_SITE_ID,
-        notify_url: 'http://localhost:3000/api/cinetpay-notify',
-        mode: 'PRODUCTION', // or 'SANDBOX'
+        notify_url: `${window.location.origin}/api/cinetpay-notify`,
+        mode: 'PRODUCTION',
       });
       (window as any).CinetPay.getCheckout({
         transaction_id: Math.floor(Math.random() * 100000000).toString(),
@@ -54,6 +59,7 @@ const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSucc
         currency: 'XOF',
         channels: 'ALL',
         description: 'Abonnement Premium - Gagne Ton Concours',
+         metadata: user.uid, // Pass Firebase User ID in metadata
         customer_name: user?.fullName || 'Utilisateur',
         customer_surname: '',
         customer_email: user?.email || '',
@@ -68,16 +74,20 @@ const CinetPayButton: React.FC<{ onSuccess: () => void; user: any }> = ({ onSucc
         if (e.status === 'ACCEPTED') {
           onSuccess();
         } else {
+          toast({ title: 'Paiement échoué', description: 'Votre paiement n\'a pas pu être traité.', variant: 'destructive'});
           setIsLoading(false);
         }
       });
        (window as any).CinetPay.on('error', (e:any) => {
             console.error('CinetPay Error:', e);
+            toast({ title: 'Erreur de paiement', description: 'Une erreur technique est survenue.', variant: 'destructive'});
             setIsLoading(false);
       });
       (window as any).CinetPay.on('close', () => {
         setIsLoading(false);
       });
+    } else {
+         toast({ title: 'Erreur', description: 'Le service de paiement n\'est pas disponible. Veuillez rafraîchir la page.', variant: 'destructive'});
     }
   };
 
@@ -103,18 +113,20 @@ export default function PremiumPage() {
     if (!user) return;
     setIsUpgrading(true);
     try {
-        await updateUserSubscriptionInFirestore(user.uid, 'premium');
-        await reloadUserData();
+        // We will now rely on the webhook to update the subscription.
+        // We can show a pending state to the user.
         toast({
-            title: "Félicitations ! 🎉",
-            description: "Vous êtes maintenant un membre Premium.",
+            title: "Paiement reçu ! 🎉",
+            description: "Votre compte sera mis à niveau dans quelques instants.",
         });
-        router.push('/dashboard');
+        // We optimistically reload data, but the webhook is the source of truth.
+        setTimeout(() => {
+            reloadUserData();
+            router.push('/dashboard');
+        }, 3000); 
+
     } catch (error) {
-        console.error("Error upgrading to premium:", error);
-        toast({ title: "Erreur de mise à niveau", description: "Une erreur est survenue lors de la mise à niveau de votre compte. Veuillez nous contacter.", variant: "destructive" });
-    } finally {
-        setIsUpgrading(false);
+        console.error("Error during UI update post-payment:", error);
     }
   }, [user, reloadUserData, router, toast]);
 
@@ -169,7 +181,7 @@ export default function PremiumPage() {
                       Vous êtes déjà Premium
                    </Button>
                 ) : (
-                  <CinetPayButton onSuccess={handleUpgradeSuccess} user={userData} />
+                  <CinetPayButton onSuccess={handleUpgradeSuccess} user={user} />
                 )}
                  
                  <div className="text-center mt-6">

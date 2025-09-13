@@ -9,8 +9,6 @@ import { useAuth } from '@/hooks/useAuth.tsx';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserSubscriptionInFirestore } from '@/lib/firestore.service';
 import { useRouter } from 'next/navigation';
-import { Kkiapay } from 'kkiapay-react';
-
 
 const premiumFeatures = [
     { icon: BrainCircuit, text: "Génération de quiz intelligente et illimitée" },
@@ -44,8 +42,7 @@ export default function PremiumPage() {
   const router = useRouter();
   const [isUpgrading, setIsUpgrading] = useState(false);
 
-  // Callback function on successful payment
-  const handlePaymentSuccess = useCallback(async () => {
+  const handleSimulateUpgrade = async () => {
     if (!user) return;
     setIsUpgrading(true);
     try {
@@ -57,16 +54,13 @@ export default function PremiumPage() {
         });
         router.push('/dashboard');
     } catch (error) {
-        console.error("Error upgrading to premium after payment:", error);
-        toast({ title: "Erreur de mise à niveau", description: "Votre paiement a réussi, mais une erreur est survenue lors de la mise à niveau de votre compte. Veuillez nous contacter.", variant: "destructive" });
+        console.error("Error upgrading to premium:", error);
+        toast({ title: "Erreur de mise à niveau", description: "Une erreur est survenue lors de la mise à niveau de votre compte. Veuillez nous contacter.", variant: "destructive" });
     } finally {
         setIsUpgrading(false);
     }
-  }, [user, reloadUserData, toast, router]);
+  };
 
-  const closeKkiapayWidget = () => {
-    console.log('Kkiapay widget closed');
-  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -116,25 +110,13 @@ export default function PremiumPage() {
                       Vous êtes déjà Premium
                    </Button>
                 ) : (
-                  <Kkiapay
-                      amount={5000}
-                      // IMPORTANT: Remplacez cette clé par votre clé d'API publique Kkiapay
-                      apikey="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      sandbox={true}
-                      // @ts-ignore
-                      callback={handlePaymentSuccess}
-                      onClose={closeKkiapayWidget}
-                      phone={userData?.phone || ''}
-                      fullname={userData?.fullName || ''}
-                      email={userData?.email || ''}
+                  <Button 
+                    onClick={handleSimulateUpgrade}
+                    disabled={isUpgrading}
+                    className="w-full h-12 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white shadow-lg"
                   >
-                      <Button 
-                        disabled={isUpgrading}
-                        className="w-full h-12 text-lg font-bold bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white shadow-lg"
-                      >
-                          {isUpgrading ? <><Loader className="w-5 h-5 mr-3 animate-spin"/> Mise à niveau...</> : <><Rocket className="w-5 h-5 mr-3" />Je deviens Premium</>}
-                      </Button>
-                  </Kkiapay>
+                      {isUpgrading ? <><Loader className="w-5 h-5 mr-3 animate-spin"/> Mise à niveau...</> : <><Rocket className="w-5 h-5 mr-3" />Je deviens Premium</>}
+                  </Button>
                 )}
                  
                  <div className="text-center mt-6">

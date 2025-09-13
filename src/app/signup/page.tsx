@@ -120,13 +120,23 @@ export default function SignupPage() {
     } catch (error: any) {
       console.error(error);
       let errorMessage = "Une erreur est survenue lors de la création du compte.";
+      
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "Ce numéro de téléphone est déjà utilisé."
+        toast({
+            variant: "destructive",
+            title: "Ce numéro de téléphone est déjà utilisé",
+            description: "Il semble que vous ayez déjà un compte. Essayez de vous connecter.",
+            action: <Button variant="secondary" onClick={() => router.push('/login')}>Se connecter</Button>,
+        });
+        setLoading(false);
+        return;
+
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Le mot de passe doit contenir au moins 6 caractères."
       } else if (error.code === 'auth/invalid-email') {
          errorMessage = "Le format du numéro de téléphone est invalide. Assurez-vous qu'il ne contient pas d'espaces ou de caractères spéciaux."
       }
+
       toast({
         variant: "destructive",
         title: "Erreur d'inscription",

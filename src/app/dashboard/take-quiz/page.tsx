@@ -74,17 +74,21 @@ function TakeQuizComponent() {
     const totalQuestions = quiz.questions.length;
     
     try {
-        await saveAttemptToFirestore({
-            userId: user.uid,
-            quizId: quiz.id || 'generated',
-            quizTitle: quiz.title,
-            score: score,
-            totalQuestions: totalQuestions,
-            percentage: Math.round((score / totalQuestions) * 100),
-            correctAnswers: score,
-            createdAt: new Date(),
-        });
-        toast({ title: 'Résultats enregistrés !', description: 'Votre performance a été sauvegardée.' });
+        if(quiz.id && quiz.id.startsWith('generated-')) {
+          // Do not save attempt for AI-generated quizzes as they have no persistent ID
+        } else {
+           await saveAttemptToFirestore({
+              userId: user.uid,
+              quizId: quiz.id,
+              quizTitle: quiz.title,
+              score: score,
+              totalQuestions: totalQuestions,
+              percentage: Math.round((score / totalQuestions) * 100),
+              correctAnswers: score,
+              createdAt: new Date(),
+          });
+          toast({ title: 'Résultats enregistrés !', description: 'Votre performance a été sauvegardée.' });
+        }
     } catch(error) {
         console.error("Failed to save attempt", error);
         toast({ title: 'Erreur', description: "Impossible d'enregistrer vos résultats.", variant: 'destructive' });
@@ -94,55 +98,42 @@ function TakeQuizComponent() {
   useEffect(() => {
     const loadQuiz = async () => {
       setLoading(true);
-      
       const quizIdParam = searchParams.get('id');
       const sourceParam = searchParams.get('source');
 
-      let loadedQuiz: ActiveQuiz | null = null;
+      let loadedQuizData: Quiz | null = null;
 
-      if (sourceParam === 'generated') {
-        const quizData = sessionStorage.getItem('generatedQuiz');
-        if (quizData) {
-          const parsedData: Quiz = JSON.parse(quizData);
-          loadedQuiz = {...parsedData, id: `generated-${Date.now()}`};
-        } else {
-          toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
-          router.push('/dashboard/quizzes');
-          return;
-        }
-      } else if (quizIdParam) {
-        try {
-          const allQuizzes = await getQuizzesFromFirestore();
-          const foundQuiz = allQuizzes.find(q => q.id === quizIdParam);
-          if (foundQuiz) {
-            loadedQuiz = foundQuiz as ActiveQuiz;
-          } else {
-            toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
-            router.push('/dashboard/quizzes');
-            return;
+      try {
+        if (sourceParam === 'generated') {
+          const quizDataString = sessionStorage.getItem('generatedQuiz');
+          if (quizDataString) {
+            loadedQuizData = JSON.parse(quizDataString) as Quiz;
           }
-        } catch (error) {
-          toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
-          router.push('/dashboard/quizzes');
-          return;
+        } else if (quizIdParam) {
+          const allQuizzes = await getQuizzesFromFirestore();
+          loadedQuizData = allQuizzes.find(q => q.id === quizIdParam) || null;
         }
-      } else {
-        router.push('/dashboard/quizzes');
-        return;
-      }
-      
-      if (loadedQuiz) {
-        setQuiz(loadedQuiz);
-        setUserAnswers(Array((loadedQuiz.questions || []).length).fill([]));
-        
-        let duration = loadedQuiz.duration_minutes || 0;
-        if(sourceParam === 'generated') {
-            duration = (loadedQuiz.questions.length || 10); // 1 minute per question for generated quizzes
-        }
-        setTimeLeft(duration * 60);
-      }
 
-      setLoading(false);
+        if (loadedQuizData && loadedQuizData.questions && loadedQuizData.questions.length > 0) {
+          const activeQuiz: ActiveQuiz = {
+            id: loadedQuizData.id || `generated-${Date.now()}`,
+            ...loadedQuizData,
+          };
+          setQuiz(activeQuiz);
+          setUserAnswers(Array(activeQuiz.questions.length).fill([]));
+          let duration = activeQuiz.duration_minutes || activeQuiz.questions.length; // 1 min per question fallback
+          setTimeLeft(duration * 60);
+        } else {
+          toast({ title: 'Erreur', description: 'Le quiz est invalide ou introuvable.', variant: 'destructive' });
+          router.push('/dashboard/quizzes');
+        }
+      } catch (error) {
+        console.error("Error loading quiz:", error);
+        toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
+        router.push('/dashboard/quizzes');
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadQuiz();

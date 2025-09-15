@@ -180,7 +180,7 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
                     <Label>Options et Bonnes réponses *</Label>
                     <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: '' })}>Ajouter Option</Button>
                 </div>
-                 {questionErrors?.options && <p className="text-red-500 text-xs mt-1">{questionErrors.options.message}</p>}
+                 {questionErrors?.options?.root && <p className="text-red-500 text-xs mt-1">{questionErrors.options.root.message}</p>}
                  {questionErrors?.correctAnswers && <p className="text-red-500 text-xs mt-1">{questionErrors.correctAnswers.message}</p>}
 
                 <div className="space-y-2 mt-1">
@@ -280,7 +280,7 @@ const QuizForm = ({ onFormSubmit, handleCloseDialog, handleOpenAiDialog }: { onF
                         </Button>
                     </div>
                 </div>
-                {errors.questions && !errors.questions.root && <p className="text-red-500 text-sm">{errors.questions.message}</p>}
+                {errors.questions?.root && <p className="text-red-500 text-sm">{errors.questions.root.message}</p>}
                 
                 <div className="space-y-6">
                 {questions.map((question, qIndex) => (

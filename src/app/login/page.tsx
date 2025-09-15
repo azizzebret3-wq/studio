@@ -75,7 +75,7 @@ export default function LoginPage() {
         await sendPasswordResetEmail(auth, email);
         toast({
             title: "Email de réinitialisation envoyé",
-            description: "Veuillez consulter l'adresse e-mail associée à votre compte (même si elle est fictive, Firebase enverra un lien si l'utilisateur existe). Pour ce prototype, vérifiez la console Firebase ou contactez un admin si besoin.",
+            description: "Veuillez suivre les instructions envoyées à l'email associé à votre compte. Si vous ne voyez rien, vérifiez vos spams.",
         });
         setIsResetDialogOpen(false);
         setResetPhone("");

@@ -513,6 +513,7 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
 
 
   const handleCorrectAnswerChange = (optionValue: string) => {
+      if (!optionValue) return;
       const isChecked = correctAnswers.includes(optionValue);
       const newCorrectAnswers = isChecked
           ? correctAnswers.filter((a: string) => a !== optionValue)
@@ -544,7 +545,7 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
             <Label>Options et Bonnes réponses *</Label>
             <Button type="button" variant="outline" size="sm" onClick={() => append({ value: '' })}>Ajouter Option</Button>
         </div>
-        {questionErrors?.options && <p className="text-red-500 text-xs mt-1">{questionErrors.options.message}</p>}
+        {questionErrors?.options?.root && <p className="text-red-500 text-xs mt-1">{questionErrors.options.root.message}</p>}
         {questionErrors?.correctAnswers && <p className="text-red-500 text-xs mt-1">{questionErrors.correctAnswers.message}</p>}
 
         <div className="space-y-2 mt-1">

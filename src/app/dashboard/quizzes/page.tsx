@@ -161,7 +161,7 @@ export default function QuizzesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleGenerateAndStart} className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
               <Input
                 id="topic"
                 placeholder="Ex: La révolution de 1983 au Burkina Faso..."
@@ -182,7 +182,8 @@ export default function QuizzesPage() {
                   </SelectContent>
               </Select>
             <Button
-              type="submit"
+              type="button"
+              onClick={handleGenerateAndStart}
               disabled={isGenerating}
               className="w-full sm:w-auto h-11 text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
             >
@@ -198,7 +199,7 @@ export default function QuizzesPage() {
                 </>
               )}
             </Button>
-          </form>
+          </div>
         </CardContent>
       </Card>
 

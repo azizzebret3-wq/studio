@@ -550,9 +550,9 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
+  // While loading, or if the user is logged in, show a loader.
+  // This avoids showing the homepage content and then redirecting.
   if (loading || user) {
-    // During load or for logged-in users, render a static placeholder.
-    // This matches the server render and avoids hydration mismatch.
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-blue-800 flex items-center justify-center">
         <div className="relative">

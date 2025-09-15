@@ -1,7 +1,7 @@
 // src/app/dashboard/take-quiz/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Button } from '@/components/ui/button';
@@ -25,26 +25,25 @@ type QuestionResult = {
   explanation?: string;
 };
 
-export default function TakeQuizPage() {
+function TakeQuizComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const [quiz, setQuiz] = React.useState<ActiveQuiz | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-  const [userAnswers, setUserAnswers] = React.useState<string[][]>([]);
-  const [quizFinished, setQuizFinished] = React.useState(false);
-  const [timeLeft, setTimeLeft] = React.useState(900); // 15 minutes default
-  const [results, setResults] = React.useState<QuestionResult[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [quiz, setQuiz] = useState<ActiveQuiz | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<string[][]>([]);
+  const [quizFinished, setQuizFinished] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes default
+  const [results, setResults] = useState<QuestionResult[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const quizId = searchParams.get('id');
   const source = searchParams.get('source');
 
-  
-  const handleFinishQuiz = React.useCallback(async () => {
-    if (!quiz || !user || quizFinished) return; // Prevent multiple submissions
+  const handleFinishQuiz = useCallback(async () => {
+    if (!quiz || !user || quizFinished) return;
     
     setQuizFinished(true);
 
@@ -96,51 +95,68 @@ export default function TakeQuizPage() {
     }
   }, [quiz, user, source, userAnswers, toast, quizFinished, router]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadQuiz = async () => {
       setLoading(true);
       
-      const quizId = searchParams.get('id');
-      const source = searchParams.get('source');
+      const quizIdParam = searchParams.get('id');
+      const sourceParam = searchParams.get('source');
 
-      if (source === 'generated') {
+      let loadedQuiz: ActiveQuiz | null = null;
+
+      if (sourceParam === 'generated') {
         const quizData = sessionStorage.getItem('generatedQuiz');
         if (quizData) {
           const parsedData: GenerateQuizOutput = JSON.parse(quizData);
-          const activeQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
-          setQuiz(activeQuiz as ActiveQuiz);
-          setUserAnswers(Array((activeQuiz.questions || []).length).fill([]));
-          setTimeLeft((activeQuiz.questions.length || 10) * 60); // 1 minute per question
+          loadedQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
         } else {
           toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
           router.push('/dashboard/quizzes');
+          setLoading(false);
+          return;
         }
-      } else if (quizId) {
+      } else if (quizIdParam) {
         try {
           const allQuizzes = await getQuizzesFromFirestore();
-          const foundQuiz = allQuizzes.find(q => q.id === quizId);
+          const foundQuiz = allQuizzes.find(q => q.id === quizIdParam);
           if (foundQuiz) {
-            setQuiz(foundQuiz);
-            setUserAnswers(Array((foundQuiz.questions || []).length).fill([]));
-            setTimeLeft(foundQuiz.duration_minutes * 60);
+            loadedQuiz = foundQuiz;
           } else {
             toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
             router.push('/dashboard/quizzes');
+            setLoading(false);
+            return;
           }
         } catch (error) {
           toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
           router.push('/dashboard/quizzes');
+          setLoading(false);
+          return;
         }
       } else {
         router.push('/dashboard/quizzes');
+        setLoading(false);
+        return;
       }
+      
+      if (loadedQuiz) {
+        setQuiz(loadedQuiz);
+        setUserAnswers(Array((loadedQuiz.questions || []).length).fill([]));
+        
+        let duration = loadedQuiz.duration_minutes || 0;
+        if(sourceParam === 'generated') {
+            duration = (loadedQuiz.questions.length || 10); // 1 minute per question for generated quizzes
+        }
+        setTimeLeft(duration * 60);
+      }
+
       setLoading(false);
     };
 
     loadQuiz();
   }, [router, toast, searchParams]);
   
-  React.useEffect(() => {
+  useEffect(() => {
     let timer: NodeJS.Timeout;
     if (quiz && !quizFinished && timeLeft > 0) {
       timer = setInterval(() => {
@@ -339,4 +355,18 @@ export default function TakeQuizPage() {
       </Card>
     </div>
   );
+}
+
+export default function TakeQuizPage() {
+    return (
+        // Suspense boundary is required for useSearchParams to work
+        <React.Suspense fallback={
+            <div className="flex flex-col gap-4 justify-center items-center h-screen">
+                <Loader className="w-12 h-12 animate-spin text-purple-500" />
+                <p className="font-medium text-muted-foreground">Préparation du quiz...</p>
+            </div>
+        }>
+            <TakeQuizComponent />
+        </React.Suspense>
+    )
 }

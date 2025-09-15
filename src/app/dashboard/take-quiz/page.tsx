@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { GenerateQuizOutput } from '@/ai/flows/generate-dynamic-quizzes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -14,7 +13,7 @@ import { getQuizzesFromFirestore, Quiz, saveAttemptToFirestore } from '@/lib/fir
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth.tsx';
 
-type ActiveQuiz = Quiz;
+type ActiveQuiz = Omit<Quiz, 'id'> & { id: string };
 
 type QuestionResult = {
   question: string;
@@ -39,15 +38,12 @@ function TakeQuizComponent() {
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const quizId = searchParams.get('id');
-  const source = searchParams.get('source');
-
   const handleFinishQuiz = useCallback(async () => {
     if (!quiz || !user || quizFinished) return;
     
     setQuizFinished(true);
 
-    if (source === 'generated') {
+    if (searchParams.get('source') === 'generated') {
       sessionStorage.removeItem('generatedQuiz');
     }
     
@@ -93,7 +89,7 @@ function TakeQuizComponent() {
         console.error("Failed to save attempt", error);
         toast({ title: 'Erreur', description: "Impossible d'enregistrer vos résultats.", variant: 'destructive' });
     }
-  }, [quiz, user, source, userAnswers, toast, quizFinished, router]);
+  }, [quiz, user, searchParams, userAnswers, toast, quizFinished, router]);
 
   useEffect(() => {
     const loadQuiz = async () => {
@@ -107,12 +103,11 @@ function TakeQuizComponent() {
       if (sourceParam === 'generated') {
         const quizData = sessionStorage.getItem('generatedQuiz');
         if (quizData) {
-          const parsedData: GenerateQuizOutput = JSON.parse(quizData);
-          loadedQuiz = {...parsedData.quiz, id: `generated-${Date.now()}`};
+          const parsedData: Quiz = JSON.parse(quizData);
+          loadedQuiz = {...parsedData, id: `generated-${Date.now()}`};
         } else {
           toast({ title: 'Erreur', description: 'Aucun quiz généré trouvé.', variant: 'destructive' });
           router.push('/dashboard/quizzes');
-          setLoading(false);
           return;
         }
       } else if (quizIdParam) {
@@ -120,22 +115,19 @@ function TakeQuizComponent() {
           const allQuizzes = await getQuizzesFromFirestore();
           const foundQuiz = allQuizzes.find(q => q.id === quizIdParam);
           if (foundQuiz) {
-            loadedQuiz = foundQuiz;
+            loadedQuiz = foundQuiz as ActiveQuiz;
           } else {
             toast({ title: 'Erreur', description: 'Quiz non trouvé.', variant: 'destructive' });
             router.push('/dashboard/quizzes');
-            setLoading(false);
             return;
           }
         } catch (error) {
           toast({ title: 'Erreur de chargement', description: 'Impossible de charger le quiz.', variant: 'destructive' });
           router.push('/dashboard/quizzes');
-          setLoading(false);
           return;
         }
       } else {
         router.push('/dashboard/quizzes');
-        setLoading(false);
         return;
       }
       

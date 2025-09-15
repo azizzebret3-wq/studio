@@ -87,7 +87,7 @@ export default function QuizzesPage() {
     try {
       const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: parseInt(numberOfQuestions) });
       
-      sessionStorage.setItem('generatedQuiz', JSON.stringify(result));
+      sessionStorage.setItem('generatedQuiz', JSON.stringify(result.quiz));
       
       toast({
         title: 'Quiz généré avec succès !',
@@ -161,7 +161,7 @@ export default function QuizzesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
+          <form onSubmit={handleGenerateAndStart} className="flex flex-col sm:flex-row items-center gap-4">
               <Input
                 id="topic"
                 placeholder="Ex: La révolution de 1983 au Burkina Faso..."
@@ -182,8 +182,7 @@ export default function QuizzesPage() {
                   </SelectContent>
               </Select>
             <Button
-              type="button"
-              onClick={handleGenerateAndStart}
+              type="submit"
               disabled={isGenerating}
               className="w-full sm:w-auto h-11 text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
             >
@@ -199,7 +198,7 @@ export default function QuizzesPage() {
                 </>
               )}
             </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
 

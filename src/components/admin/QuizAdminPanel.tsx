@@ -84,13 +84,66 @@ const formatDateForInput = (date?: Date): string => {
     }
 };
 
+function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, onOpenChange: (open: boolean) => void, onGenerate: (topic: string, numQuestions: number) => void }) {
+    const [topic, setTopic] = useState('');
+    const [numQuestions, setNumQuestions] = useState('10');
+
+    const handleGenerate = () => {
+        if (!topic) return;
+        onGenerate(topic, parseInt(numQuestions));
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Générer un Quiz avec l'IA</DialogTitle>
+                    <DialogDescription>
+                        Entrez un sujet et choisissez le nombre de questions à générer.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="ai-topic">Sujet du Quiz</Label>
+                        <Input 
+                            id="ai-topic"
+                            value={topic}
+                            onChange={(e) => setTopic(e.target.value)}
+                            placeholder="Ex: L'histoire du Burkina Faso après l'indépendance"
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="ai-num-questions">Nombre de questions</Label>
+                         <Select value={numQuestions} onValueChange={setNumQuestions}>
+                            <SelectTrigger id="ai-num-questions">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="5">5 Questions</SelectItem>
+                                <SelectItem value="10">10 Questions</SelectItem>
+                                <SelectItem value="15">15 Questions</SelectItem>
+                                <SelectItem value="20">20 Questions</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+                    <Button onClick={handleGenerate}>Générer</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export default function QuizAdminPanel() {
   const { toast } = useToast();
   const router = useRouter();
 
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isQuizFormOpen, setIsQuizFormOpen] = useState(false);
+  const [isAiGeneratorOpen, setIsAiGeneratorOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
 
@@ -170,11 +223,11 @@ export default function QuizAdminPanel() {
     } else {
       resetForm();
     }
-    setIsDialogOpen(true);
+    setIsQuizFormOpen(true);
   };
   
   const handleCloseDialog = () => {
-    setIsDialogOpen(false);
+    setIsQuizFormOpen(false);
     resetForm();
   };
 
@@ -234,13 +287,11 @@ export default function QuizAdminPanel() {
     }
   };
 
-  const handleGenerateQuiz = async () => {
-    const topic = prompt("Quel est le sujet du quiz à générer ?");
-    if (!topic) return;
-
+  const handleGenerateQuiz = async (topic: string, numQuestions: number) => {
+    setIsAiGeneratorOpen(false);
     setIsGenerating(true);
     try {
-      const result: GenerateQuizOutput = await generateQuiz({ topic });
+      const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: numQuestions });
       const { quiz } = result;
 
       reset({
@@ -268,6 +319,7 @@ export default function QuizAdminPanel() {
   };
   
   return (
+    <>
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -340,7 +392,7 @@ export default function QuizAdminPanel() {
         </CardContent>
       </Card>
       
-      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
+      <Dialog open={isQuizFormOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingQuiz ? 'Modifier le Quiz' : 'Créer un nouveau Quiz'}</DialogTitle>
@@ -409,7 +461,7 @@ export default function QuizAdminPanel() {
                   <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold">Questions</h3>
                       <div>
-                          <Button type="button" variant="outline" size="sm" onClick={handleGenerateQuiz} disabled={isGenerating}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setIsAiGeneratorOpen(true)} disabled={isGenerating}>
                               {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
                           </Button>
                           <Button type="button" size="sm" className="ml-2" onClick={() => appendQuestion({ question: '', options: [{ value: '' }, { value: '' }], correctAnswers: [], explanation: '' })}>
@@ -443,11 +495,13 @@ export default function QuizAdminPanel() {
         </DialogContent>
       </Dialog>
     </div>
+    <AiGeneratorDialog open={isAiGeneratorOpen} onOpenChange={setIsAiGeneratorOpen} onGenerate={handleGenerateQuiz} />
+    </>
   );
 }
 
 function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuestion: (index: number) => void }) {
-  const { control, register, watch, setValue, formState: { errors } } = useFormContext();
+  const { control, register, watch, setValue, formState: { errors } } = useFormContext<QuizFormData>();
   
   const { fields, append, remove } = useFieldArray({
     control,
@@ -455,15 +509,17 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
   });
 
   const questionOptions = watch(`questions.${qIndex}.options`);
+  const correctAnswers = watch(`questions.${qIndex}.correctAnswers`) || [];
+
 
   const handleCorrectAnswerChange = (optionValue: string) => {
-    const currentCorrectAnswers = watch(`questions.${qIndex}.correctAnswers`, []) || [];
-    const newCorrectAnswers = currentCorrectAnswers.includes(optionValue)
-      ? currentCorrectAnswers.filter((a: string) => a !== optionValue)
-      : [...currentCorrectAnswers, optionValue];
-    setValue(`questions.${qIndex}.correctAnswers`, newCorrectAnswers, { shouldValidate: true, shouldDirty: true });
+      const isChecked = correctAnswers.includes(optionValue);
+      const newCorrectAnswers = isChecked
+          ? correctAnswers.filter((a: string) => a !== optionValue)
+          : [...correctAnswers, optionValue];
+      setValue(`questions.${qIndex}.correctAnswers`, newCorrectAnswers, { shouldValidate: true, shouldDirty: true });
   };
-
+  
   const questionErrors = errors.questions?.[qIndex] as any;
   
   return (
@@ -495,7 +551,7 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
             {fields.map((option, optionIndex) => (
                 <div key={option.id} className="flex items-center gap-2">
                     <Checkbox
-                      checked={watch(`questions.${qIndex}.correctAnswers`, []).includes(questionOptions?.[optionIndex]?.value)}
+                      checked={correctAnswers.includes(questionOptions?.[optionIndex]?.value)}
                       onCheckedChange={() => handleCorrectAnswerChange(questionOptions?.[optionIndex]?.value)}
                       disabled={!questionOptions?.[optionIndex]?.value}
                     />

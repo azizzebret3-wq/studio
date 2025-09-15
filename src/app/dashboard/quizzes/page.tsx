@@ -45,6 +45,7 @@ export default function QuizzesPage() {
   });
   
   const [topic, setTopic] = useState('');
+  const [numberOfQuestions, setNumberOfQuestions] = useState('10');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const isPremium = userData?.subscription_type === 'premium';
@@ -84,7 +85,7 @@ export default function QuizzesPage() {
 
     setIsGenerating(true);
     try {
-      const result: GenerateQuizOutput = await generateQuiz({ topic });
+      const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: parseInt(numberOfQuestions) });
       
       sessionStorage.setItem('generatedQuiz', JSON.stringify(result));
       
@@ -169,6 +170,17 @@ export default function QuizzesPage() {
                 disabled={isGenerating}
                 className="h-11 text-base rounded-lg flex-1"
               />
+              <Select value={numberOfQuestions} onValueChange={setNumberOfQuestions} disabled={isGenerating}>
+                  <SelectTrigger className="h-11 text-base rounded-lg w-full sm:w-[180px]">
+                      <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="5">5 Questions</SelectItem>
+                      <SelectItem value="10">10 Questions</SelectItem>
+                      <SelectItem value="15">15 Questions</SelectItem>
+                      <SelectItem value="20">20 Questions</SelectItem>
+                  </SelectContent>
+              </Select>
             <Button
               type="submit"
               disabled={isGenerating}

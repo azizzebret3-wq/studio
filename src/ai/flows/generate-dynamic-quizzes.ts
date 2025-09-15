@@ -12,6 +12,7 @@ import {z} from 'genkit';
 
 const GenerateQuizInputSchema = z.object({
   topic: z.string().describe('The topic for the quiz.'),
+  numberOfQuestions: z.number().describe('The number of questions to generate for the quiz.'),
 });
 export type GenerateQuizInput = z.infer<typeof GenerateQuizInputSchema>;
 
@@ -28,7 +29,7 @@ const QuizSchema = z.object({
     category: z.string().describe('The general category of the quiz (e.g., "Culture Générale", "Droit Administratif").'),
     difficulty: z.enum(['facile', 'moyen', 'difficile']).describe('The difficulty level of the quiz.'),
     duration_minutes: z.number().describe('The estimated duration of the quiz in minutes.'),
-    questions: z.array(QuestionSchema).describe('A list of 10 to 15 questions for the quiz.'),
+    questions: z.array(QuestionSchema).describe('A list of questions for the quiz.'),
 });
 
 const GenerateQuizOutputSchema = z.object({
@@ -57,7 +58,7 @@ Please generate a complete quiz with the following structure:
 - A relevant category.
 - A difficulty level (facile, moyen, or difficile).
 - An estimated duration in minutes.
-- A list of 10 to 15 questions.
+- A list of {{{numberOfQuestions}}} questions.
 - For each question:
     - The question text.
     - At least 4 plausible options.

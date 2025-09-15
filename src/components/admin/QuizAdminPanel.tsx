@@ -136,6 +136,111 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
     )
 }
 
+const QuizForm = ({ onFormSubmit, handleCloseDialog }: { onFormSubmit: (data: QuizFormData) => void, handleCloseDialog: () => void }) => {
+    const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useFormContext<QuizFormData>();
+    const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({ control, name: "questions" });
+    const isMockExam = watch("isMockExam");
+    const [isAiGeneratorOpen, setIsAiGeneratorOpen] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    return (
+        <>
+            <form onSubmit={handleSubmit(onFormSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
+              <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+                <Card className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="title">Titre *</Label>
+                      <Input {...register("title")} id="title" />
+                      {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="description">Description *</Label>
+                      <Input {...register("description")} id="description" />
+                      {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="category">Catégorie *</Label>
+                      <Input {...register("category")} id="category"/>
+                      {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Difficulté *</Label>
+                      <Controller name="difficulty" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
+                        </Select>
+                      )}/>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Accès *</Label>
+                      <Controller name="access_type" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
+                        </Select>
+                      )}/>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
+                      <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
+                      {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-4">
+                    <Controller name="isMockExam" control={control} render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}/>
+                    <Label htmlFor="isMockExam">Concours Blanc</Label>
+                  </div>
+                  {isMockExam && (
+                    <div className="mt-4 space-y-1.5">
+                      <Label>Date de programmation</Label>
+                      <Controller name="scheduledFor" control={control} render={({ field }) => (
+                        <Input type="datetime-local" value={formatDateForInput(field.value)} onChange={(e) => field.onChange(new Date(e.target.value))}/>
+                      )}/>
+                      {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
+                    </div>
+                  )}
+                </Card>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">Questions</h3>
+                      <div>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setIsAiGeneratorOpen(true)} disabled={isGenerating}>
+                              {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
+                          </Button>
+                          <Button type="button" size="sm" className="ml-2" onClick={() => appendQuestion({ question: '', options: [{ value: '' }, { value: '' }], correctAnswers: [], explanation: '' })}>
+                              <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
+                          </Button>
+                      </div>
+                  </div>
+                  {errors.questions && !errors.questions.root && <p className="text-red-500 text-sm">{errors.questions.message}</p>}
+                  
+                  <div className="space-y-6">
+                    {questions.map((question, qIndex) => (
+                      <Card key={question.id} className="bg-muted/50 p-4 space-y-3">
+                         <QuestionsForm qIndex={qIndex} removeQuestion={removeQuestion} />
+                         {errors.questions?.[qIndex] && (
+                            <p className="text-red-500 text-xs mt-1">Veuillez vérifier les champs de cette question.</p>
+                         )}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSubmitting}>Annuler</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Enregistrement...</> : <><Save className="w-4 h-4 mr-2"/>Enregistrer</>}
+                </Button>
+              </DialogFooter>
+            </form>
+        </>
+    )
+}
+
 export default function QuizAdminPanel() {
   const { toast } = useToast();
   const router = useRouter();
@@ -160,15 +265,8 @@ export default function QuizAdminPanel() {
       questions: [],
     },
   });
-
-  const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = formMethods;
-
-  const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({
-    control,
-    name: "questions",
-  });
-
-  const isMockExam = watch("isMockExam");
+  
+  const { reset } = formMethods;
 
   const fetchQuizzes = useCallback(async () => {
     setIsLoading(true);
@@ -399,98 +497,7 @@ export default function QuizAdminPanel() {
             <DialogDescription>Remplissez les détails ci-dessous. Les champs marqués d'un * sont obligatoires.</DialogDescription>
           </DialogHeader>
           <FormProvider {...formMethods}>
-            <form onSubmit={handleSubmit(onFormSubmit)} className="flex-1 overflow-hidden flex flex-col gap-4">
-              <div className="flex-1 overflow-y-auto pr-4 space-y-6">
-                <Card className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="title">Titre *</Label>
-                      <Input {...register("title")} id="title" />
-                      {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="description">Description *</Label>
-                      <Input {...register("description")} id="description" />
-                      {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="category">Catégorie *</Label>
-                      <Input {...register("category")} id="category"/>
-                      {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Difficulté *</Label>
-                      <Controller name="difficulty" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger><SelectValue/></SelectTrigger>
-                          <SelectContent><SelectItem value="facile">Facile</SelectItem><SelectItem value="moyen">Moyen</SelectItem><SelectItem value="difficile">Difficile</SelectItem></SelectContent>
-                        </Select>
-                      )}/>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Accès *</Label>
-                      <Controller name="access_type" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger><SelectValue/></SelectTrigger>
-                          <SelectContent><SelectItem value="gratuit">Gratuit</SelectItem><SelectItem value="premium">Premium</SelectItem></SelectContent>
-                        </Select>
-                      )}/>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="duration_minutes">Durée (minutes) *</Label>
-                      <Input type="number" {...register("duration_minutes")} id="duration_minutes" />
-                      {errors.duration_minutes && <p className="text-red-500 text-xs mt-1">{errors.duration_minutes.message}</p>}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 mt-4">
-                    <Controller name="isMockExam" control={control} render={({ field }) => <Switch id="isMockExam" checked={field.value} onCheckedChange={field.onChange} />}/>
-                    <Label htmlFor="isMockExam">Concours Blanc</Label>
-                  </div>
-                  {isMockExam && (
-                    <div className="mt-4 space-y-1.5">
-                      <Label>Date de programmation</Label>
-                      <Controller name="scheduledFor" control={control} render={({ field }) => (
-                        <Input type="datetime-local" value={formatDateForInput(field.value)} onChange={(e) => field.onChange(new Date(e.target.value))}/>
-                      )}/>
-                      {errors.scheduledFor && <p className="text-red-500 text-xs mt-1">{errors.scheduledFor.message}</p>}
-                    </div>
-                  )}
-                </Card>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">Questions</h3>
-                      <div>
-                          <Button type="button" variant="outline" size="sm" onClick={() => setIsAiGeneratorOpen(true)} disabled={isGenerating}>
-                              {isGenerating ? <Loader className="w-4 h-4 mr-2 animate-spin"/> : <BrainCircuit className="w-4 h-4 mr-2"/>} Générer avec l'IA
-                          </Button>
-                          <Button type="button" size="sm" className="ml-2" onClick={() => appendQuestion({ question: '', options: [{ value: '' }, { value: '' }], correctAnswers: [], explanation: '' })}>
-                              <PlusCircle className="w-4 h-4 mr-2"/> Ajouter Question
-                          </Button>
-                      </div>
-                  </div>
-                  {errors.questions && !errors.questions.root && <p className="text-red-500 text-sm">{errors.questions.message}</p>}
-                  
-                  <div className="space-y-6">
-                    {questions.map((question, qIndex) => (
-                      <Card key={question.id} className="bg-muted/50 p-4 space-y-3">
-                         <QuestionsForm qIndex={qIndex} removeQuestion={removeQuestion} />
-                         {errors.questions?.[qIndex] && (
-                            <p className="text-red-500 text-xs mt-1">Veuillez vérifier les champs de cette question.</p>
-                         )}
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSubmitting}>Annuler</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? <><Loader className="w-4 h-4 mr-2 animate-spin"/>Enregistrement...</> : <><Save className="w-4 h-4 mr-2"/>Enregistrer</>}
-                </Button>
-              </DialogFooter>
-            </form>
+            <QuizForm onFormSubmit={onFormSubmit} handleCloseDialog={handleCloseDialog} />
           </FormProvider>
         </DialogContent>
       </Dialog>

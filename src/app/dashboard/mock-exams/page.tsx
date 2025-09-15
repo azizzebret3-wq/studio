@@ -105,7 +105,7 @@ export default function MockExamsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {mockExams.map(exam => {
+          {mockExams.length > 0 ? mockExams.map(exam => {
             const isLocked = exam.access_type === 'premium' && !isPremium && !isAdmin;
             const scheduledDate = new Date(exam.scheduledFor!);
             const hasStarted = new Date() > scheduledDate;
@@ -152,9 +152,8 @@ export default function MockExamsPage() {
                 </CardContent>
               </Card>
             )
-          })}
-           {mockExams.length === 0 && (
-            <div className="text-center py-16 col-span-full">
+          }) : (
+            <div className="flex flex-col items-center justify-center text-center py-16 col-span-full">
                 <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CalendarClock className="w-10 h-10 text-gray-400" />
                 </div>

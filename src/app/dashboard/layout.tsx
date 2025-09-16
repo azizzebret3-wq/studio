@@ -354,133 +354,131 @@ export default function DashboardLayout({
 
         {/* Mobile Menu */}
         <div className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          ></div>
-          <div 
-            className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] glassmorphism-dark text-white shadow-2xl transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
-          >
-            <div className="h-full flex flex-col">
-              <div className="p-6 flex-shrink-0">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
-                      <Trophy className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="font-bold text-lg">Menu</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-white hover:bg-white/20 rounded-xl"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <X className="w-6 h-6" />
-                  </Button>
-                </div>
-
-                <Card className="glassmorphism mb-8 border-white/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-12 h-12 ring-2 ring-white/30 shadow-lg">
-                        <AvatarImage src={userData?.photoURL ?? undefined} />
-                        <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
-                          {getInitials(userData?.fullName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-bold text-white text-sm">{userData?.fullName || 'Utilisateur'}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                           <Badge className={`text-xs font-bold border-0 ${isAdmin ? 'bg-indigo-500 text-white' : (isPremium ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : 'bg-white/20 text-white border-white/30')}`}>
-                                {isAdmin ? <><Crown className="w-3 h-3 mr-1" />Admin</> : (isPremium ? <><Crown className="w-3 h-3 mr-1" />Premium</> : 'Gratuit')}
-                            </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-6 pb-6">
-                <div className="space-y-3 mb-8">
-                  <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />Navigation
-                  </h3>
-                  {userNavItems.map((item) => (
-                    <Link key={item.title} href={item.url}>
-                      <Button
-                        variant="ghost"
-                        className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
-                          isNavItemActive(item.url)
-                            ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
-                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
-                          isNavItemActive(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
-                        }`}>
-                          <item.icon className="w-5 h-5" />
-                        </div>
-                        {item.title}
-                      </Button>
-                    </Link>
-                  ))}
-                </div>
-
-                {isAdmin && (
-                  <div className="space-y-3 mb-8">
-                    <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
-                      <Settings className="w-4 h-4" />Administration
-                    </h3>
-                    {adminNavItems.map((item) => (
-                      <Link key={item.title} href={item.url}>
-                         <Button
-                            variant="ghost"
-                            className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
-                              isNavItemActive(item.url)
-                                ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
-                                : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                            }`}
-                          >
-                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
-                              isNavItemActive(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
-                           }`}>
-                              <item.icon className="w-5 h-5" />
+            <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setMobileMenuOpen(false)}
+            ></div>
+            <div 
+                className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] glassmorphism-dark text-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+                <div className="p-6 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                                <Trophy className="w-6 h-6 text-white" />
                             </div>
-                            {item.title}
-                          </Button>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                
-                <div className="space-y-3 border-t border-white/20 pt-6">
-                  {!isPremium && !isAdmin && (
-                    <Link href="/dashboard/premium">
-                      <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
-                        <Crown className="w-5 h-5 mr-3" />Passer Premium
-                        <Sparkles className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
-                  )}
-                  <Link href="/dashboard/settings">
-                     <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
-                       <Settings className="w-5 h-5 mr-4" />Paramètres
-                     </Button>
-                   </Link>
-                   <Link href="/dashboard/profile">
-                    <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
-                      <UserIcon className="w-5 h-5 mr-4" />Mon Profil
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" className="w-full justify-start text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-4" onClick={handleLogout}>
-                    <LogOut className="w-5 h-5 mr-4" />Se déconnecter
-                  </Button>
+                            <span className="font-bold text-lg">Menu</span>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20 rounded-xl"
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
+                            <X className="w-6 h-6" />
+                        </Button>
+                    </div>
+
+                    <Card className="glassmorphism mb-8 border-white/20">
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                                <Avatar className="w-12 h-12 ring-2 ring-white/30 shadow-lg">
+                                    <AvatarImage src={userData?.photoURL ?? undefined} />
+                                    <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
+                                        {getInitials(userData?.fullName)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <p className="font-bold text-white text-sm">{userData?.fullName || 'Utilisateur'}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <Badge className={`text-xs font-bold border-0 ${isAdmin ? 'bg-indigo-500 text-white' : (isPremium ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : 'bg-white/20 text-white border-white/30')}`}>
+                                            {isAdmin ? <><Crown className="w-3 h-3 mr-1" />Admin</> : (isPremium ? <><Crown className="w-3 h-3 mr-1" />Premium</> : 'Gratuit')}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-              </div>
+
+                <div className="flex-1 overflow-y-auto px-6 pb-6">
+                    <div className="space-y-3 mb-8">
+                        <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                            <Sparkles className="w-4 h-4" />Navigation
+                        </h3>
+                        {userNavItems.map((item) => (
+                            <Link key={item.title} href={item.url}>
+                                <Button
+                                    variant="ghost"
+                                    className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
+                                        isNavItemActive(item.url)
+                                            ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+                                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
+                                        isNavItemActive(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
+                                    }`}>
+                                        <item.icon className="w-5 h-5" />
+                                    </div>
+                                    {item.title}
+                                </Button>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {isAdmin && (
+                        <div className="space-y-3 mb-8">
+                            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                                <Settings className="w-4 h-4" />Administration
+                            </h3>
+                            {adminNavItems.map((item) => (
+                                <Link key={item.title} href={item.url}>
+                                    <Button
+                                        variant="ghost"
+                                        className={`w-full justify-start rounded-2xl p-4 font-semibold text-sm transition-all hover-lift ${
+                                            isNavItemActive(item.url)
+                                                ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+                                                : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 ${
+                                            isNavItemActive(item.url) ? 'bg-white/20' : `bg-gradient-to-r ${item.gradient} text-white shadow-sm`
+                                        }`}>
+                                            <item.icon className="w-5 h-5" />
+                                        </div>
+                                        {item.title}
+                                    </Button>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <div className="space-y-3 border-t border-white/20 pt-6">
+                        {!isPremium && !isAdmin && (
+                            <Link href="/dashboard/premium">
+                                <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-2xl p-4 shadow-lg">
+                                    <Crown className="w-5 h-5 mr-3" />Passer Premium
+                                    <Sparkles className="w-4 h-4 ml-2" />
+                                </Button>
+                            </Link>
+                        )}
+                        <Link href="/dashboard/settings">
+                            <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
+                                <Settings className="w-5 h-5 mr-4" />Paramètres
+                            </Button>
+                        </Link>
+                        <Link href="/dashboard/profile">
+                            <Button variant="ghost" className="w-full justify-start text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl p-4">
+                                <UserIcon className="w-5 h-5 mr-4" />Mon Profil
+                            </Button>
+                        </Link>
+                        <Button variant="ghost" className="w-full justify-start text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-4" onClick={handleLogout}>
+                            <LogOut className="w-5 h-5 mr-4" />Se déconnecter
+                        </Button>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
 
 

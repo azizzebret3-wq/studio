@@ -78,9 +78,10 @@ export default function SignupPage() {
       const q = query(usersCollectionRef, limit(2));
       const querySnapshot = await getDocs(q);
       
-      let userRole = 'user';
-      if (querySnapshot.docs.length === 0) { // Check if it's strictly the first one
-        userRole = 'admin';
+      const isFirstUser = querySnapshot.docs.length <= 1;
+      const userRole = isFirstUser ? 'admin' : 'user';
+
+      if(isFirstUser) {
         toast({
             title: "Super-utilisateur activé !",
             description: "Le premier compte a été créé avec les droits d'administrateur.",
@@ -101,14 +102,19 @@ export default function SignupPage() {
       
        // Send notification to admin if it's a new user
       if (userRole === 'user') {
-          const adminId = await getAdminUserId();
-          if (adminId) {
-              await createNotification({
-                  userId: adminId,
-                  title: "Nouvel utilisateur inscrit",
-                  description: `${fullName} vient de s'inscrire sur la plateforme.`,
-                  href: `/dashboard/admin/users`,
-              });
+          try {
+            const adminId = await getAdminUserId();
+            if (adminId) {
+                await createNotification({
+                    userId: adminId,
+                    title: "Nouvel utilisateur inscrit",
+                    description: `${fullName} vient de s'inscrire sur la plateforme.`,
+                    href: `/dashboard/admin/users`,
+                });
+            }
+          } catch (notificationError) {
+              // Non-blocking error. Log it for debugging but don't show to user.
+              console.warn("Could not send admin notification:", notificationError);
           }
       }
       

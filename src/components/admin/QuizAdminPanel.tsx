@@ -452,13 +452,12 @@ export default function QuizAdminPanel() {
       const { quiz } = result;
 
       reset({
+        ...formMethods.getValues(),
         title: quiz.title,
         description: quiz.description,
         category: quiz.category,
         difficulty: quiz.difficulty,
         duration_minutes: quiz.duration_minutes,
-        isMockExam: false,
-        scheduledFor: undefined,
         questions: (quiz.questions || []).map(q => ({
             question: q.question,
             options: q.options.map(opt => ({ value: opt })),

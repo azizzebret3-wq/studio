@@ -34,7 +34,16 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_CINETPAY_API_KEY: process.env.CINETPAY_API_KEY,
     NEXT_PUBLIC_CINETPAY_SITE_ID: process.env.CINETPAY_SITE_ID,
-  }
+  },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

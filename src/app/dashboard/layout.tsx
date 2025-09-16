@@ -222,10 +222,6 @@ export default function DashboardLayout({
             box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
           }
           
-          .menu-slide {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          }
-          
           .background-mesh {
             background-image: 
               radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 40%),
@@ -357,14 +353,16 @@ export default function DashboardLayout({
         </header>
 
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden">
-            <div 
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setMobileMenuOpen(false)}
-            ></div>
-            <div className="fixed top-0 right-0 h-full w-80 max-w-[85vw] glassmorphism-dark text-white menu-slide transform translate-x-0 shadow-2xl">
-              <div className="p-6">
+        <div className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          ></div>
+          <div 
+            className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] glassmorphism-dark text-white shadow-2xl transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          >
+            <div className="h-full flex flex-col">
+              <div className="p-6 flex-shrink-0">
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -402,7 +400,9 @@ export default function DashboardLayout({
                     </div>
                   </CardContent>
                 </Card>
+              </div>
 
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
                 <div className="space-y-3 mb-8">
                   <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />Navigation
@@ -481,7 +481,8 @@ export default function DashboardLayout({
               </div>
             </div>
           </div>
-        )}
+        </div>
+
 
         <main className="flex-1">
           {children}

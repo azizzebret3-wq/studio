@@ -482,7 +482,7 @@ export default function DashboardLayout({
         </div>
 
 
-        <main className="flex-1">
+        <main className="flex-1 pb-20 lg:pb-0">
           {children}
         </main>
 
@@ -490,7 +490,6 @@ export default function DashboardLayout({
         <WhatsAppFloat />
         
          {/* Bottom mobile navigation */}
-         <div className="lg:hidden h-20"></div>
          <div className="lg:hidden fixed bottom-0 left-0 right-0 glassmorphism border-t z-30">
              <div className="grid grid-cols-4 gap-1 p-2">
                  {mobileNavItems.map((item) => {

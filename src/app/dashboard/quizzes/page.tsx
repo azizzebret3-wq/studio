@@ -46,6 +46,7 @@ export default function QuizzesPage() {
   
   const [topic, setTopic] = useState('');
   const [numberOfQuestions, setNumberOfQuestions] = useState('10');
+  const [difficulty, setDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const isPremium = userData?.subscription_type === 'premium';
@@ -85,7 +86,7 @@ export default function QuizzesPage() {
 
     setIsGenerating(true);
     try {
-      const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: parseInt(numberOfQuestions) });
+      const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: parseInt(numberOfQuestions), difficulty });
       
       sessionStorage.setItem('generatedQuiz', JSON.stringify(result.quiz));
       
@@ -161,7 +162,7 @@ export default function QuizzesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleGenerateAndStart} className="flex flex-col sm:flex-row items-center gap-4">
+          <form onSubmit={handleGenerateAndStart} className="flex flex-col md:flex-row items-center gap-4">
               <Input
                 id="topic"
                 placeholder="Ex: La révolution de 1983 au Burkina Faso..."
@@ -170,21 +171,34 @@ export default function QuizzesPage() {
                 disabled={isGenerating}
                 className="h-11 text-base rounded-lg flex-1"
               />
-              <Select value={numberOfQuestions} onValueChange={setNumberOfQuestions} disabled={isGenerating}>
-                  <SelectTrigger className="h-11 text-base rounded-lg w-full sm:w-[180px]">
-                      <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="5">5 Questions</SelectItem>
-                      <SelectItem value="10">10 Questions</SelectItem>
-                      <SelectItem value="15">15 Questions</SelectItem>
-                      <SelectItem value="20">20 Questions</SelectItem>
-                  </SelectContent>
-              </Select>
+              <div className="flex w-full md:w-auto gap-4">
+                <Select value={numberOfQuestions} onValueChange={setNumberOfQuestions} disabled={isGenerating}>
+                    <SelectTrigger className="h-11 text-base rounded-lg w-full">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                        <SelectItem value="20">20 Questions</SelectItem>
+                        <SelectItem value="30">30 Questions</SelectItem>
+                        <SelectItem value="40">40 Questions</SelectItem>
+                        <SelectItem value="50">50 Questions</SelectItem>
+                    </SelectContent>
+                </Select>
+                 <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)} disabled={isGenerating}>
+                    <SelectTrigger className="h-11 text-base rounded-lg w-full">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="facile">Facile</SelectItem>
+                        <SelectItem value="moyen">Moyen</SelectItem>
+                        <SelectItem value="difficile">Difficile</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
             <Button
               type="submit"
               disabled={isGenerating}
-              className="w-full sm:w-auto h-11 text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
+              className="w-full md:w-auto h-11 text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
             >
               {isGenerating ? (
                 <>

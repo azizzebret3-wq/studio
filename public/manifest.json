@@ -1,11 +1,11 @@
 {
   "name": "Gagne ton concours",
   "short_name": "GTC",
-  "description": "La plateforme pour réussir les concours de la fonction publique au Burkina Faso.",
-  "start_url": "/dashboard",
+  "description": "La plateforme la plus moderne et interactive pour réussir tes concours directs et professionnels.",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#6d28d9",
+  "background_color": "#f9faff",
+  "theme_color": "#5a3ab5",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -16,12 +16,6 @@
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/icons/maskable_icon.png",
-      "sizes": "196x196",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }

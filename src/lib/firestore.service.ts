@@ -180,12 +180,17 @@ export const getUsersFromFirestore = async (): Promise<AppUser[]> => {
 };
 
 export const getAdminUserId = async (): Promise<string | null> => {
-  const q = query(collection(db, 'users'), where('role', '==', 'admin'), orderBy('createdAt'), limit(1));
-  const adminSnapshot = await getDocs(q);
-  if (!adminSnapshot.empty) {
-    return adminSnapshot.docs[0].id;
+  try {
+    const q = query(collection(db, 'users'), where('role', '==', 'admin'), orderBy('createdAt'), limit(1));
+    const adminSnapshot = await getDocs(q);
+    if (!adminSnapshot.empty) {
+      return adminSnapshot.docs[0].id;
+    }
+    return null;
+  } catch (error) {
+    console.warn("Could not query for admin user, probably because index is not ready.", error);
+    return null;
   }
-  return null;
 }
 
 export const updateUserRoleInFirestore = async (uid: string, role: 'admin' | 'user') => {

@@ -46,26 +46,28 @@ const prompt = ai.definePrompt({
   name: 'generateQuizPrompt',
   input: {schema: GenerateQuizInputSchema},
   output: {schema: GenerateQuizOutputSchema},
-  prompt: `You are an expert in creating educational quizzes for civil service exams in Burkina Faso. Your task is to generate a complete quiz based on the provided topic.
+  prompt: `Vous êtes un expert pédagogue spécialisé dans la création de matériel de préparation pour les concours de la fonction publique du Burkina Faso.
+Votre mission est de concevoir un quiz exceptionnel, pertinent et stimulant sur le sujet fourni.
 
-The quiz must be in French.
+Le quiz doit être entièrement en français et optimisé pour un apprentissage efficace.
 
-Topic: {{{topic}}}
+Sujet du Quiz : {{{topic}}}
 
-Please generate a complete quiz with the following structure:
-- A creative title.
-- A short description.
-- A relevant category.
-- A difficulty level (facile, moyen, or difficile).
-- An estimated duration in minutes.
-- A list of {{{numberOfQuestions}}} questions.
-- For each question:
-    - The question text.
-    - At least 4 plausible options.
-    - A list of one or more correct answers. CRITICAL: Each string in the 'correctAnswers' array must be an exact, case-sensitive match to one of the strings in the 'options' array.
-    - A brief explanation for the answer, especially if the question is complex.
+Veuillez générer un quiz complet en respectant scrupuleusement la structure suivante :
+- Un titre créatif et accrocheur.
+- Une description concise mais informative.
+- Une catégorie pertinente pour les concours burkinabè (ex: "Culture Générale", "Droit Administratif", "Histoire du Burkina Faso").
+- Un niveau de difficulté évalué ('facile', 'moyen', 'difficile').
+- Une durée estimée en minutes, réaliste pour le nombre de questions.
+- Une liste de {{{numberOfQuestions}}} questions.
 
-Ensure the questions are relevant to Burkinabè civil service exams and cover different aspects of the topic. The options should be well-formulated, with credible distractors.
+Pour chaque question, vous devez fournir :
+- Le texte de la question : Clair, sans ambiguïté, et conçu pour tester la compréhension et l'analyse, pas seulement la mémorisation.
+- Au moins 4 options de réponse : Les distracteurs (mauvaises réponses) doivent être plausibles, basés sur des erreurs courantes ou des concepts proches.
+- La ou les bonnes réponses : CRUCIAL : la chaîne de caractères de chaque bonne réponse doit correspondre EXACTEMENT à l'une des chaînes dans le tableau d'options.
+- Une explication détaillée et pédagogique : C'est obligatoire. Expliquez pourquoi la ou les réponses sont correctes et, si possible, pourquoi les autres options sont incorrectes. Cette explication est la clé de la valeur ajoutée de l'apprentissage.
+
+Assurez-vous que les questions couvrent divers aspects du sujet (historiques, culturels, juridiques, administratifs, etc.) et sont formulées de manière à préparer solidement les candidats aux exigences réelles des concours.
 `,
 });
 

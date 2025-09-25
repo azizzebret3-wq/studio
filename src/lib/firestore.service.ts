@@ -317,6 +317,8 @@ export const createNotification = async (notificationData: Omit<AppNotification,
         });
     } catch (e) {
         console.error("Error creating notification: ", e);
+        // Do not throw an error to the user, just log it.
+        // This is a background task and should not block the user's flow.
     }
 };
 

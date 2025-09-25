@@ -84,13 +84,14 @@ const formatDateForInput = (date?: Date): string => {
     }
 };
 
-function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, onOpenChange: (open: boolean) => void, onGenerate: (topic: string, numQuestions: number) => void }) {
+function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, onOpenChange: (open: boolean) => void, onGenerate: (topic: string, numQuestions: number, difficulty: 'facile' | 'moyen' | 'difficile') => void }) {
     const [topic, setTopic] = useState('');
     const [numQuestions, setNumQuestions] = useState('10');
+    const [difficulty, setDifficulty] = useState<'facile' | 'moyen' | 'difficile'>('moyen');
 
     const handleGenerate = () => {
         if (!topic) return;
-        onGenerate(topic, parseInt(numQuestions));
+        onGenerate(topic, parseInt(numQuestions), difficulty);
     }
 
     return (
@@ -99,7 +100,7 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
                 <DialogHeader>
                     <DialogTitle>Générer un Quiz avec l'IA</DialogTitle>
                     <DialogDescription>
-                        Entrez un sujet et choisissez le nombre de questions à générer.
+                        Entrez un sujet, le nombre de questions et la difficulté.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -109,22 +110,38 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
                             id="ai-topic"
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
-                            placeholder="Ex: L'histoire du Burkina Faso après l'indépendance"
+                            placeholder="Ex: La révolution de 1983 au Burkina Faso"
                         />
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="ai-num-questions">Nombre de questions</Label>
-                         <Select value={numQuestions} onValueChange={setNumQuestions}>
-                            <SelectTrigger id="ai-num-questions">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="5">5 Questions</SelectItem>
-                                <SelectItem value="10">10 Questions</SelectItem>
-                                <SelectItem value="15">15 Questions</SelectItem>
-                                <SelectItem value="20">20 Questions</SelectItem>
-                            </SelectContent>
-                        </Select>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="ai-num-questions">Nombre de questions</Label>
+                             <Select value={numQuestions} onValueChange={setNumQuestions}>
+                                <SelectTrigger id="ai-num-questions">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="10">10 Questions</SelectItem>
+                                    <SelectItem value="20">20 Questions</SelectItem>
+                                    <SelectItem value="30">30 Questions</SelectItem>
+                                    <SelectItem value="40">40 Questions</SelectItem>
+                                    <SelectItem value="50">50 Questions</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="ai-difficulty">Difficulté</Label>
+                            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)}>
+                                <SelectTrigger id="ai-difficulty">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="facile">Facile</SelectItem>
+                                    <SelectItem value="moyen">Moyen</SelectItem>
+                                    <SelectItem value="difficile">Difficile</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
                 <DialogFooter>
@@ -444,11 +461,11 @@ export default function QuizAdminPanel() {
     }
   };
 
-  const handleGenerateQuiz = async (topic: string, numQuestions: number) => {
+  const handleGenerateQuiz = async (topic: string, numQuestions: number, difficulty: 'facile' | 'moyen' | 'difficile') => {
     setIsAiGeneratorOpen(false);
     setIsGenerating(true);
     try {
-      const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: numQuestions });
+      const result: GenerateQuizOutput = await generateQuiz({ topic, numberOfQuestions: numQuestions, difficulty });
       const { quiz } = result;
 
       reset({

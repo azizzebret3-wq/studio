@@ -1,11 +1,8 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// For server-side code, we use process.env.
-// For client-side, Next.js automatically makes NEXT_PUBLIC_ variables available.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -15,10 +12,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-
-// Initialiser Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Connect to emulators in development
+if (process.env.NODE_ENV === 'development') {
+    try {
+        console.log("Connecting to Firebase emulators");
+        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+        connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    } catch (e) {
+        console.error("Error connecting to Firebase emulators. Is the emulator suite running?");
+        console.error(e);
+    }
+}
 
 export { app, auth, db };

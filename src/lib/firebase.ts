@@ -20,8 +20,8 @@ const db = getFirestore(app);
 if (process.env.NODE_ENV === 'development') {
     try {
         console.log("Connecting to Firebase emulators");
-        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        connectFirestoreEmulator(db, "127.0.0.1", 8080);
+        connectAuthEmulator(auth, "http://0.0.0.0:9099", { disableWarnings: true });
+        connectFirestoreEmulator(db, "0.0.0.0", 8080);
     } catch (e) {
         console.error("Error connecting to Firebase emulators. Is the emulator suite running?");
         console.error(e);

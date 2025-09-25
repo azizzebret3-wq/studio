@@ -45,6 +45,7 @@ export async function generateQuiz(input: GenerateQuizInput): Promise<GenerateQu
 
 const prompt = ai.definePrompt({
   name: 'generateQuizPrompt',
+  model: 'gemini-pro',
   input: {schema: GenerateQuizInputSchema},
   output: {schema: GenerateQuizOutputSchema},
   prompt: `Vous êtes un expert pédagogue et un concepteur de programmes d'examen de classe mondiale, spécialisé dans la création de matériel pour des concours de haut niveau.

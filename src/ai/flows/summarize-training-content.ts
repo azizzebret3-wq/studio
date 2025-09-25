@@ -27,6 +27,7 @@ export async function summarizeTrainingContent(input: SummarizeTrainingContentIn
 
 const prompt = ai.definePrompt({
   name: 'summarizeTrainingContentPrompt',
+  model: 'gemini-pro',
   input: {schema: SummarizeTrainingContentInputSchema},
   output: {schema: SummarizeTrainingContentOutputSchema},
   prompt: `You are an expert summarizer, able to distill complex information into its key points.

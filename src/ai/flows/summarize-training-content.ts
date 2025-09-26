@@ -4,11 +4,12 @@
  * @fileOverview A training content summarization AI agent.
  *
  * - summarizeTrainingContent - A function that handles the summarization process.
- * - SummarizeTrainingContentInput - The input type for the summarizeTrainingContent function.
- * - SummarizeTrainingContentOutput - The return type for the summarizeTrainingContent function.
+ * - SummarizeTrainingContentInput - The input type for the summarizeTrainingContent function
+ * - SummarizeTrainingContentOutput - The return type for the summarizeTrainingContent function
  */
 
 import {ai} from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const SummarizeTrainingContentInputSchema = z.object({
@@ -27,7 +28,7 @@ export async function summarizeTrainingContent(input: SummarizeTrainingContentIn
 
 const prompt = ai.definePrompt({
   name: 'summarizeTrainingContentPrompt',
-  model: 'gemini-1.5-flash-latest',
+  model: googleAI.model('gemini-1.5-flash'),
   input: {schema: SummarizeTrainingContentInputSchema},
   output: {schema: SummarizeTrainingContentOutputSchema},
   prompt: `You are an expert summarizer, able to distill complex information into its key points.

@@ -8,6 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const GenerateQuizInputSchema = z.object({
@@ -45,7 +46,7 @@ export async function generateQuiz(input: GenerateQuizInput): Promise<GenerateQu
 
 const prompt = ai.definePrompt({
   name: 'generateQuizPrompt',
-  model: 'gemini-1.5-flash-latest',
+  model: googleAI.model('gemini-1.5-flash'),
   input: {schema: GenerateQuizInputSchema},
   output: {schema: GenerateQuizOutputSchema},
   prompt: `Vous êtes un expert pédagogue et un concepteur de programmes d'examen de classe mondiale, spécialisé dans la création de matériel pour des concours de haut niveau.

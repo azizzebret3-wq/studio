@@ -16,7 +16,7 @@ import {
   User as UserIcon,
   Crown,
   Trophy,
-  LayoutDashboard as BarChart3,
+  Activity,
   Sparkles,
   Menu,
   X,
@@ -44,7 +44,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const userNavItems = [
-  { title: "Accueil", url: "/dashboard", icon: BarChart3, gradient: "from-purple-500 to-pink-500" },
+  { title: "Accueil", url: "/dashboard", icon: Activity, gradient: "from-purple-500 to-pink-500" },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play, gradient: "from-blue-500 to-cyan-500" },
   { title: "Concours", url: "/dashboard/mock-exams", icon: CalendarClock, gradient: "from-indigo-500 to-blue-500" },
   { title: "Ressources", url: "/dashboard/documents", icon: BookOpen, gradient: "from-orange-500 to-red-500" },
@@ -58,7 +58,7 @@ const adminNavItems = [
 ];
 
 const mobileNavItems = [
-  { title: "Accueil", url: "/dashboard", icon: BarChart3 },
+  { title: "Accueil", url: "/dashboard", icon: Activity },
   { title: "Quiz", url: "/dashboard/quizzes", icon: Play },
   { title: "Concours", url: "/dashboard/mock-exams", icon: CalendarClock },
   { title: "Ressources", url: "/dashboard/documents", icon: BookOpen },

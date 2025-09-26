@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, Clock, Info, Award, BarChart, Loader, ArrowLeft, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Info, Award, Activity, Loader, ArrowLeft, ArrowRight } from 'lucide-react';
 import { getQuizzesFromFirestore, Quiz, saveAttemptToFirestore } from '@/lib/firestore.service';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth.tsx';
@@ -232,7 +232,7 @@ function TakeQuizComponent() {
         </Card>
         
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2"><BarChart/>Correction détaillée</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2"><Activity/>Correction détaillée</h2>
           {results.map((result, index) => (
             <Card key={index} className="glassmorphism shadow-lg border-l-4" style={{borderColor: result.isCorrect ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
               <CardContent className="p-6 space-y-3">

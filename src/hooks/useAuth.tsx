@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, DocumentSnapshot } from 'firebase/firestore';
+import { doc, getDoc, DocumentSnapshot, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface UserData {
@@ -15,6 +15,8 @@ export interface UserData {
   photoURL?: string;
   role?: 'admin' | 'user';
   subscription_type?: 'premium' | 'gratuit';
+  subscription_tier?: 'mensuel' | 'annuel';
+  subscription_expires_at?: Date | Timestamp | null;
   createdAt: any;
 }
 
@@ -38,7 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userDoc: DocumentSnapshot = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const data = userDoc.data();
-        return {
+        
+        const fetchedData: UserData = {
           uid: user.uid,
           fullName: data.fullName,
           email: data.email,
@@ -47,8 +50,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           photoURL: user.photoURL,
           role: data.role,
           subscription_type: data.subscription_type,
+          subscription_tier: data.subscription_tier,
+          subscription_expires_at: data.subscription_expires_at,
           createdAt: data.createdAt,
         };
+
+        // Check for subscription expiry
+        if (fetchedData.subscription_type === 'premium' && fetchedData.subscription_expires_at) {
+          const expiryDate = (fetchedData.subscription_expires_at as Timestamp).toDate();
+          if (new Date() > expiryDate) {
+            // Subscription has expired, revert to 'gratuit'
+            await updateDoc(userDocRef, {
+              subscription_type: 'gratuit',
+              subscription_tier: null,
+              subscription_expires_at: null
+            });
+            // Update local data to reflect the change
+            fetchedData.subscription_type = 'gratuit';
+            fetchedData.subscription_tier = undefined;
+            fetchedData.subscription_expires_at = null;
+          }
+        }
+        
+        return fetchedData;
       } else {
         return null;
       }

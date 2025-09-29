@@ -33,6 +33,8 @@ export interface AppUser {
   createdAt: Date;
   role?: 'admin' | 'user';
   subscription_type?: 'premium' | 'gratuit';
+  subscription_tier?: 'mensuel' | 'annuel';
+  subscription_expires_at?: Date | Timestamp | null;
   photoURL?: string;
 }
 
@@ -171,6 +173,7 @@ export const getUsersFromFirestore = async (): Promise<AppUser[]> => {
                 ...data,
                 uid: doc.id,
                 createdAt: parseFirestoreDate(data.createdAt),
+                subscription_expires_at: data.subscription_expires_at ? parseFirestoreDate(data.subscription_expires_at) : null,
             } as AppUser;
         });
     } catch (e) {
@@ -203,10 +206,28 @@ export const updateUserRoleInFirestore = async (uid: string, role: 'admin' | 'us
     }
 };
 
-export const updateUserSubscriptionInFirestore = async (uid: string, subscription_type: 'premium' | 'gratuit') => {
+export const updateUserSubscriptionInFirestore = async (uid: string, subscription: { type: 'gratuit' | 'premium', tier: 'mensuel' | 'annuel' | null }) => {
     try {
         const userDocRef = doc(db, 'users', uid);
-        await updateDoc(userDocRef, { subscription_type });
+        const updateData: Partial<AppUser> = {};
+
+        updateData.subscription_type = subscription.type;
+        
+        if (subscription.type === 'premium') {
+            const now = new Date();
+            if (subscription.tier === 'mensuel') {
+                updateData.subscription_expires_at = new Date(now.setMonth(now.getMonth() + 1));
+            } else if (subscription.tier === 'annuel') {
+                updateData.subscription_expires_at = new Date(now.setFullYear(now.getFullYear() + 1));
+            }
+            updateData.subscription_tier = subscription.tier || undefined;
+        } else {
+            // If setting to 'gratuit', clear expiry and tier
+            updateData.subscription_expires_at = null;
+            updateData.subscription_tier = null;
+        }
+
+        await updateDoc(userDocRef, updateData as any);
     } catch (e) {
         console.error("Error updating user subscription: ", e);
         throw new Error("Could not update user subscription");
@@ -378,6 +399,7 @@ export async function getUser(uid: string): Promise<AppUser | null> {
       uid: userDoc.id,
       ...data,
       createdAt: parseFirestoreDate(data.createdAt),
+      subscription_expires_at: data.subscription_expires_at ? parseFirestoreDate(data.subscription_expires_at) : null,
     } as AppUser;
   }
   return null;

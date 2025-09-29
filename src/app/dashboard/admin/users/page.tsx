@@ -37,12 +37,14 @@ import {
 } from "@/components/ui/select";
 
 
+type SubscriptionValue = "gratuit" | "premium_mensuel" | "premium_annuel";
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [newRole, setNewRole] = useState<'admin' | 'user' | ''>('');
-  const [newSubscription, setNewSubscription] = useState<'premium' | 'gratuit' | ''>('');
+  const [newSubscription, setNewSubscription] = useState<SubscriptionValue>('gratuit');
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -71,7 +73,12 @@ export default function AdminUsersPage() {
   const handleOpenDialog = (user: AppUser) => {
     setSelectedUser(user);
     setNewRole(user.role || 'user');
-    setNewSubscription(user.subscription_type || 'gratuit');
+    
+    let currentSub: SubscriptionValue = 'gratuit';
+    if(user.subscription_type === 'premium') {
+        currentSub = user.subscription_tier === 'annuel' ? 'premium_annuel' : 'premium_mensuel';
+    }
+    setNewSubscription(currentSub);
     setIsDialogOpen(true);
   }
 
@@ -79,8 +86,13 @@ export default function AdminUsersPage() {
     if (!selectedUser || !newRole || !newSubscription) return;
     setIsSaving(true);
     try {
+      // Update role
       await updateUserRoleInFirestore(selectedUser.uid, newRole as 'admin' | 'user');
-      await updateUserSubscriptionInFirestore(selectedUser.uid, newSubscription as 'premium' | 'gratuit');
+      
+      // Update subscription
+      const subType = newSubscription.startsWith('premium') ? 'premium' : 'gratuit';
+      const subTier = newSubscription === 'premium_mensuel' ? 'mensuel' : (newSubscription === 'premium_annuel' ? 'annuel' : null);
+      await updateUserSubscriptionInFirestore(selectedUser.uid, { type: subType, tier: subTier });
       
       toast({
         title: 'Modifications enregistrées',
@@ -99,6 +111,15 @@ export default function AdminUsersPage() {
       setIsSaving(false);
     }
   }
+  
+  const getSubscriptionLabel = (user: AppUser) => {
+    if (user.subscription_type === 'premium') {
+        const tier = user.subscription_tier === 'annuel' ? 'Annuel' : 'Mensuel';
+        return `Premium (${tier})`;
+    }
+    return 'Gratuit';
+  }
+
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -147,7 +168,7 @@ export default function AdminUsersPage() {
                   <TableHead className="hidden lg:table-cell">Téléphone</TableHead>
                   <TableHead>Rôle</TableHead>
                   <TableHead>Abonnement</TableHead>
-                  <TableHead className="hidden md:table-cell">Type Concours</TableHead>
+                  <TableHead className="hidden md:table-cell">Expire le</TableHead>
                   <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
                   <TableHead>
                     <span className="sr-only">Actions</span>
@@ -168,12 +189,14 @@ export default function AdminUsersPage() {
                      <TableCell>
                       <Badge variant={user.subscription_type === 'premium' ? 'default' : 'outline'} className={user.subscription_type === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0' : ''}>
                         {user.subscription_type === 'premium' && <Crown className="mr-1 h-3 w-3"/>}
-                        {user.subscription_type}
+                        {getSubscriptionLabel(user)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell capitalize">{user.competitionType}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {format(user.createdAt, 'dd MMM yyyy', { locale: fr })}
+                        {user.subscription_expires_at ? format(new Date(user.subscription_expires_at as any), 'dd MMM yyyy', { locale: fr }) : 'N/A'}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {format(new Date(user.createdAt as any), 'dd MMM yyyy', { locale: fr })}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -222,13 +245,14 @@ export default function AdminUsersPage() {
             </div>
              <div className="grid gap-2">
               <Label htmlFor="subscription-select">Abonnement</Label>
-               <Select value={newSubscription} onValueChange={(value) => setNewSubscription(value as 'premium' | 'gratuit')}>
+               <Select value={newSubscription} onValueChange={(value) => setNewSubscription(value as SubscriptionValue)}>
                   <SelectTrigger id="subscription-select">
                     <SelectValue placeholder="Sélectionner un abonnement" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gratuit">Gratuit</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="premium_mensuel">Premium (Mensuel)</SelectItem>
+                    <SelectItem value="premium_annuel">Premium (Annuel)</SelectItem>
                   </SelectContent>
                 </Select>
             </div>

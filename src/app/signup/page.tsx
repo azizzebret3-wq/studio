@@ -65,8 +65,8 @@ export default function SignupPage() {
       return;
     }
     try {
-      // Use phone number to create a dummy email for Firebase Auth
-      const email = `${phone}@gagnetonconcours.app`;
+      const sanitizedPhone = phone.replace(/\s+/g, '');
+      const email = `${sanitizedPhone}@gagnetonconcours.app`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -93,7 +93,7 @@ export default function SignupPage() {
         uid: user.uid,
         fullName,
         email: user.email, // Store the dummy email
-        phone,
+        phone: sanitizedPhone,
         competitionType,
         createdAt: new Date(),
         role: userRole,

@@ -44,7 +44,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const email = `${phone}@gagnetonconcours.app`;
+      const sanitizedPhone = phone.replace(/\s+/g, '');
+      const email = `${sanitizedPhone}@gagnetonconcours.app`;
       await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: "Connexion réussie",
@@ -53,10 +54,14 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error: any) {
       console.error(error);
+      let description = "Numéro de téléphone ou mot de passe incorrect.";
+      if (error.code === 'auth/invalid-email') {
+        description = "Le format du numéro de téléphone est invalide.";
+      }
       toast({
         variant: "destructive",
         title: "Erreur de connexion",
-        description: "Numéro de téléphone ou mot de passe incorrect.",
+        description: description,
       });
     } finally {
       setLoading(false);
@@ -71,7 +76,8 @@ export default function LoginPage() {
     }
     setIsResetting(true);
     try {
-        const email = `${resetPhone}@gagnetonconcours.app`;
+        const sanitizedPhone = resetPhone.replace(/\s+/g, '');
+        const email = `${sanitizedPhone}@gagnetonconcours.app`;
         await sendPasswordResetEmail(auth, email);
         toast({
             title: "Email de réinitialisation envoyé",
@@ -84,6 +90,8 @@ export default function LoginPage() {
         let description = "Une erreur est survenue."
         if(error.code === 'auth/user-not-found'){
             description = "Aucun utilisateur trouvé avec ce numéro de téléphone."
+        } else if (error.code === 'auth/invalid-email') {
+          description = "Le format du numéro de téléphone est invalide.";
         }
         toast({
             variant: "destructive",

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getAuth, updateProfile } from 'firebase/auth';
+import { Badge } from '@/components/ui/badge';
 
 export default function ProfilePage() {
   const { user, userData, loading, reloadUserData } = useAuth();

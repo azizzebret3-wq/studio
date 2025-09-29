@@ -48,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InlineMath, BlockMath } from 'react-katex';
 
 const questionSchema = z.object({
   question: z.string().min(1, "La question est requise."),
@@ -187,10 +188,12 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
                 <Label>Texte de la question *</Label>
                 <Textarea {...register(`questions.${qIndex}.question`)} />
                 {questionErrors?.question && <p className="text-red-500 text-xs mt-1">{questionErrors.question.message}</p>}
+                <div className="p-2 text-sm text-muted-foreground"><BlockMath math={watch(`questions.${qIndex}.question`) || ''} /></div>
             </div>
             <div>
                 <Label>Explication (optionnel)</Label>
                 <Textarea {...register(`questions.${qIndex}.explanation`)} />
+                 <div className="p-2 text-sm text-muted-foreground"><BlockMath math={watch(`questions.${qIndex}.explanation`) || ''} /></div>
             </div>
             <div>
                 <div className="flex justify-between items-center mb-2">

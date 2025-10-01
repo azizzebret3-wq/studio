@@ -237,7 +237,7 @@ function TakeQuizComponent() {
           {results.map((result, index) => (
             <Card key={index} className="glassmorphism shadow-lg border-l-4" style={{borderColor: result.isCorrect ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
               <CardContent className="p-6 space-y-3">
-                <p className="font-bold">{index + 1}. <BlockMath math={result.question} /></p>
+                <div className="font-bold">{index + 1}. <BlockMath math={result.question} /></div>
                 <div className="space-y-2">
                   {result.options.map(option => {
                     const isSelected = result.selectedAnswers.includes(option);
@@ -300,7 +300,7 @@ function TakeQuizComponent() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <p className="text-lg font-semibold"><BlockMath math={currentQuestion.question} /></p>
+            <div className="text-lg font-semibold"><BlockMath math={currentQuestion.question} /></div>
             <div className="space-y-3">
               {currentQuestion.options.map((option, index) => (
                  <div key={index} className="flex items-center space-x-3 p-3 rounded-lg bg-white/50 dark:bg-black/20 hover:bg-purple-50 dark:hover:bg-purple-900/50 transition-all">

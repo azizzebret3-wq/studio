@@ -168,11 +168,11 @@ export default function QuizzesPage() {
                 placeholder="Ex: La révolution de 1983 au Burkina Faso..."
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                disabled={isGenerating}
+                disabled={true}
                 className="h-11 text-base rounded-lg flex-1"
               />
               <div className="flex w-full md:w-auto gap-4">
-                <Select value={numberOfQuestions} onValueChange={setNumberOfQuestions} disabled={isGenerating}>
+                <Select value={numberOfQuestions} onValueChange={setNumberOfQuestions} disabled={true}>
                     <SelectTrigger className="h-11 text-base rounded-lg w-full">
                         <SelectValue />
                     </SelectTrigger>
@@ -184,7 +184,7 @@ export default function QuizzesPage() {
                         <SelectItem value="50">50 Questions</SelectItem>
                     </SelectContent>
                 </Select>
-                 <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)} disabled={isGenerating}>
+                 <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)} disabled={true}>
                     <SelectTrigger className="h-11 text-base rounded-lg w-full">
                         <SelectValue />
                     </SelectTrigger>
@@ -197,20 +197,11 @@ export default function QuizzesPage() {
               </div>
             <Button
               type="submit"
-              disabled={isGenerating}
+              disabled={true}
               className="w-full md:w-auto h-11 text-base font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
             >
-              {isGenerating ? (
-                <>
-                  <Loader className="w-5 h-5 mr-3 animate-spin" />
-                  Génération...
-                </>
-              ) : (
-                <>
-                  <Wand className="w-5 h-5 mr-3" />
-                  Générer
-                </>
-              )}
+                <Wand className="w-5 h-5 mr-3" />
+                Bientôt disponible
             </Button>
           </form>
         </CardContent>

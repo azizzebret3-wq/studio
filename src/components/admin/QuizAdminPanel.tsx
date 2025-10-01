@@ -1,13 +1,13 @@
 // src/components/admin/QuizAdminPanel.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, Controller, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  ClipboardList, PlusCircle, Trash2, Edit, Loader, Save, ArrowLeft, BrainCircuit, X
+  ClipboardList, PlusCircle, Trash2, Edit, Loader, Save, ArrowLeft, BrainCircuit, X, WandSparkles
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -85,6 +85,43 @@ const formatDateForInput = (date?: Date): string => {
     }
 };
 
+const latexSnippets = {
+  fraction: '\\frac{}{}',
+  power: '^{}',
+  index: '_{}',
+  sqrt: '\\sqrt{}',
+  sum: '\\sum_{k=1}^{n}',
+  integral: '\\int_{a}^{b}',
+  limit: '\\lim_{x \\to \\infty}',
+  vector: '\\vec{}',
+  alpha: '\\alpha',
+  beta: '\\beta',
+  theta: '\\theta',
+};
+
+type LatexSnippetKey = keyof typeof latexSnippets;
+
+const MathToolbar = ({ onInsert }: { onInsert: (snippet: string) => void }) => {
+  return (
+    <div className="flex flex-wrap gap-1 p-2 rounded-md border bg-background mb-2">
+      {(Object.keys(latexSnippets) as LatexSnippetKey[]).map((key) => (
+        <Button
+          key={key}
+          type="button"
+          variant="outline"
+          size="sm"
+          className="text-xs"
+          onClick={() => onInsert(latexSnippets[key])}
+          aria-label={`Insérer ${key}`}
+        >
+          <InlineMath math={latexSnippets[key].replace(/\{\}/g, '{•}').replace(/\\vec/g, '\\vec{F}')} />
+        </Button>
+      ))}
+    </div>
+  );
+};
+
+
 function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, onOpenChange: (open: boolean) => void, onGenerate: (topic: string, numQuestions: number, difficulty: 'facile' | 'moyen' | 'difficile') => void }) {
     const [topic, setTopic] = useState('');
     const [numQuestions, setNumQuestions] = useState('10');
@@ -156,7 +193,7 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
 }
 
 function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuestion: (index: number) => void }) {
-    const { control, register, watch, setValue, formState: { errors } } = useFormContext<QuizFormData>();
+    const { control, register, watch, setValue, getValues, formState: { errors } } = useFormContext<QuizFormData>();
     
     const { fields: options, append: appendOption, remove: removeOption } = useFieldArray({
         control,
@@ -165,6 +202,30 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
 
     const questionOptions = watch(`questions.${qIndex}.options`);
     const correctAnswers = watch(`questions.${qIndex}.correctAnswers`) || [];
+
+    const activeTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const insertToTextarea = (field: "question" | "explanation", snippet: string) => {
+        const textarea = (activeTextareaRef.current?.name.endsWith(field)) ? activeTextareaRef.current : null;
+        if (!textarea) return;
+        
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const currentValue = textarea.value;
+        const newValue = currentValue.substring(0, start) + snippet + currentValue.substring(end);
+
+        setValue(`questions.${qIndex}.${field}`, newValue, { shouldValidate: true, shouldDirty: true });
+        
+        setTimeout(() => {
+            textarea.focus();
+            const cursorPos = start + snippet.indexOf('{}');
+            if (cursorPos > start) {
+                textarea.setSelectionRange(cursorPos, cursorPos);
+            } else {
+                textarea.setSelectionRange(start + snippet.length, start + snippet.length);
+            }
+        }, 0);
+    };
 
     const handleCorrectAnswerChange = (optionValue: string) => {
         if (!optionValue) return;
@@ -185,27 +246,40 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
                     <Trash2 className="w-4 h-4"/>
                 </Button>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                    <Label>Texte de la question *</Label>
-                    <Textarea {...register(`questions.${qIndex}.question`)} rows={5}/>
-                    {questionErrors?.question && <p className="text-red-500 text-xs mt-1">{questionErrors.question.message}</p>}
+            
+            <div className="space-y-2">
+                <Label>Texte de la question *</Label>
+                <MathToolbar onInsert={(snippet) => insertToTextarea("question", snippet)} />
+                <div className="grid md:grid-cols-2 gap-4">
+                    <Textarea 
+                        {...register(`questions.${qIndex}.question`)} 
+                        onFocus={(e) => activeTextareaRef.current = e.target}
+                        rows={6}
+                    />
+                    <div className="p-4 bg-background rounded-md border min-h-[140px]">
+                        <Label className="text-sm text-muted-foreground">Aperçu</Label>
+                        <div className="text-lg"><BlockMath math={watch(`questions.${qIndex}.question`) || ''} /></div>
+                    </div>
                 </div>
-                <div className="p-4 bg-background rounded-md border min-h-[120px]">
-                    <Label className="text-sm text-muted-foreground">Aperçu de la question</Label>
-                    <div className="text-lg"><BlockMath math={watch(`questions.${qIndex}.question`) || ''} /></div>
+                {questionErrors?.question && <p className="text-red-500 text-xs mt-1">{questionErrors.question.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+                <Label>Explication (optionnel)</Label>
+                <MathToolbar onInsert={(snippet) => insertToTextarea("explanation", snippet)} />
+                <div className="grid md:grid-cols-2 gap-4">
+                    <Textarea 
+                        {...register(`questions.${qIndex}.explanation`)} 
+                        onFocus={(e) => activeTextareaRef.current = e.target}
+                        rows={6}
+                    />
+                    <div className="p-4 bg-background rounded-md border min-h-[140px]">
+                        <Label className="text-sm text-muted-foreground">Aperçu</Label>
+                        <div className="text-base"><BlockMath math={watch(`questions.${qIndex}.explanation`) || ''} /></div>
+                    </div>
                 </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                    <Label>Explication (optionnel)</Label>
-                    <Textarea {...register(`questions.${qIndex}.explanation`)} rows={5}/>
-                </div>
-                 <div className="p-4 bg-background rounded-md border min-h-[120px]">
-                    <Label className="text-sm text-muted-foreground">Aperçu de l'explication</Label>
-                    <div className="text-base"><BlockMath math={watch(`questions.${qIndex}.explanation`) || ''} /></div>
-                </div>
-            </div>
+
             <div>
                 <div className="flex justify-between items-center mb-2">
                     <Label>Options et Bonnes réponses *</Label>

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, BookCheck, Zap, ChevronRight, BarChart, Loader } from "lucide-react";
+import { Trophy, BookCheck, Zap, ChevronRight, BarChart, Loader, Wand } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -64,9 +64,9 @@ export default function FormationsPage() {
             </div>
           </div>
         </div>
-        <Button>
-          <Zap className="w-4 h-4 mr-2" />
-          Proposer un parcours
+        <Button disabled>
+          <Wand className="w-4 h-4 mr-2" />
+          Bientôt disponible
         </Button>
       </div>
       

@@ -112,12 +112,13 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
                             placeholder="Ex: La révolution de 1983 au Burkina Faso"
+                            disabled={true}
                         />
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="ai-num-questions">Nombre de questions</Label>
-                             <Select value={numQuestions} onValueChange={setNumQuestions}>
+                             <Select value={numQuestions} onValueChange={setNumQuestions} disabled={true}>
                                 <SelectTrigger id="ai-num-questions">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -132,7 +133,7 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="ai-difficulty">Difficulté</Label>
-                            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)}>
+                            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)} disabled={true}>
                                 <SelectTrigger id="ai-difficulty">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -146,8 +147,8 @@ function AiGeneratorDialog({ open, onOpenChange, onGenerate }: { open: boolean, 
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-                    <Button onClick={handleGenerate}>Générer</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={true}>Annuler</Button>
+                    <Button onClick={handleGenerate} disabled={true}>Bientôt disponible</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -184,16 +185,26 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
                     <Trash2 className="w-4 h-4"/>
                 </Button>
             </div>
-            <div>
-                <Label>Texte de la question *</Label>
-                <Textarea {...register(`questions.${qIndex}.question`)} />
-                {questionErrors?.question && <p className="text-red-500 text-xs mt-1">{questionErrors.question.message}</p>}
-                <div className="p-2 text-sm text-muted-foreground"><BlockMath math={watch(`questions.${qIndex}.question`) || ''} /></div>
+            <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                    <Label>Texte de la question *</Label>
+                    <Textarea {...register(`questions.${qIndex}.question`)} rows={5}/>
+                    {questionErrors?.question && <p className="text-red-500 text-xs mt-1">{questionErrors.question.message}</p>}
+                </div>
+                <div className="p-4 bg-background rounded-md border min-h-[120px]">
+                    <Label className="text-sm text-muted-foreground">Aperçu de la question</Label>
+                    <div className="text-lg"><BlockMath math={watch(`questions.${qIndex}.question`) || ''} /></div>
+                </div>
             </div>
-            <div>
-                <Label>Explication (optionnel)</Label>
-                <Textarea {...register(`questions.${qIndex}.explanation`)} />
-                 <div className="p-2 text-sm text-muted-foreground"><BlockMath math={watch(`questions.${qIndex}.explanation`) || ''} /></div>
+            <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                    <Label>Explication (optionnel)</Label>
+                    <Textarea {...register(`questions.${qIndex}.explanation`)} rows={5}/>
+                </div>
+                 <div className="p-4 bg-background rounded-md border min-h-[120px]">
+                    <Label className="text-sm text-muted-foreground">Aperçu de l'explication</Label>
+                    <div className="text-base"><BlockMath math={watch(`questions.${qIndex}.explanation`) || ''} /></div>
+                </div>
             </div>
             <div>
                 <div className="flex justify-between items-center mb-2">
@@ -211,9 +222,12 @@ function QuestionsForm({ qIndex, removeQuestion }: { qIndex: number, removeQuest
                                 onCheckedChange={() => handleCorrectAnswerChange(questionOptions?.[optionIndex]?.value)}
                                 disabled={!questionOptions?.[optionIndex]?.value}
                              />
-                            <div className="flex-1">
+                            <div className="flex-1 grid grid-cols-2 gap-2">
                                 <Input {...register(`questions.${qIndex}.options.${optionIndex}.value`)} placeholder={`Option ${optionIndex + 1}`} />
-                                {questionErrors?.options?.[optionIndex]?.value && <p className="text-red-500 text-xs mt-1">{questionErrors.options[optionIndex].value.message}</p>}
+                                <div className="p-2 border rounded-md bg-background text-sm flex items-center">
+                                    <InlineMath math={watch(`questions.${qIndex}.options.${optionIndex}.value`) || ''} />
+                                </div>
+                                {questionErrors?.options?.[optionIndex]?.value && <p className="text-red-500 text-xs mt-1 col-span-2">{questionErrors.options[optionIndex].value.message}</p>}
                             </div>
                             <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => removeOption(optionIndex)}><X className="w-4 h-4"/></Button>
                         </div>
